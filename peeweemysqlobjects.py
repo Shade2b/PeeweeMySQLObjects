@@ -5,7 +5,7 @@ peeweemysqlobjects.py
 
 Author : BROUTTA MICKAEL
 Year : 2013/2014
-Contact : broutta.mickael@gmail.com
+Contact : broutta.mickael<at>gmail.com
 
 LICENCE
 The MIT License (MIT)
