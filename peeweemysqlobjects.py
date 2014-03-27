@@ -5,7 +5,7 @@ peeweemysqlobjects.py
 
 Author : BROUTTA MICKAEL
 Year : 2013/2014
-Contact : broutta.mickael<at>gmail.com
+Contact : broutta.mickael@gmail.com
 
 LICENCE
 The MIT License (MIT)
@@ -29,6 +29,8 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
+
+peewee licence : Copyright (c) 2010 Charles Leifer (https://github.com/coleifer/peewee/blob/master/LICENSE)
 
 This module helps convert a database 
 to a folder with all its tables as 
