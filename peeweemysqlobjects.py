@@ -115,7 +115,6 @@ class EnumField(peewee.Field):
     (warning note : http://komlenic.com/244/8-reasons-why-mysqls-enum-data-type-is-evil/ )
     '''
     db_field = 'enum'
-
     def __init__(self, *args, **kwargs):
         self.enum_values = None
         if "values" in kwargs:

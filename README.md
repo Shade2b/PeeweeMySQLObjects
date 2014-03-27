@@ -17,6 +17,7 @@ RESTRICTION
 Logged user must be able to read from the information_schema database.
 
 TODO
+* SOLVE THE FOREIGN KEY "_id" ISSUE (created by https://github.com/coleifer/peewee/blob/master/peewee.py line 895)
 * on_update and on_delete actions for foreign keys
 * better naming system for "related_name"s
 * clean-up of global variables (dbname, login, passwd). They can't be used when importing parts of the module like "from peeweemysqlobjects import get_tables"
