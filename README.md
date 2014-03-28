@@ -1,4 +1,4 @@
-PeeweeMySQLObjetcs
+PeeweeMySQLObjects
 ==================
 
 A (soon-to-be) full-featured MySQL database introspection tool to reverse-engineer MySQL databases into Python objects.
@@ -8,7 +8,6 @@ Even though Pwiz exists, I coded this before knowing about it. I proceeded to ad
 
 NOT COMPATIBLE WITH PostgreSQL OR SQLite !
 Compatible with Windows, Linux and Mac.
-It features foreign key detection and adds support for the ENUM field type.
 
 USAGE
 $ peeweemysqlobject login passwd database
@@ -21,6 +20,7 @@ TODO
 * on_update and on_delete actions for foreign keys
 * better naming system for "related_name"s
 * clean-up of global variables (dbname, login, passwd). They can't be used when importing parts of the module like "from peeweemysqlobjects import get_tables"
+* and some more...
 
 KNOWN ISSUES & TROUBLESHOOTING
 * Two fields being Foreign keys on the same table will have the same related_name, and WILL create a collision.
