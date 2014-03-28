@@ -59,6 +59,13 @@ except ImportError:
     print "Error. This module requires peewee. You can '$ pip install peewee' or get it from http://peewee.readthedocs.org/en/latest/ ."
     exit(1)
     
+# LOCAL IMPORTS #
+try:
+    from peeweemysqldata import *
+except ImportError:
+    print "Error importing data structures. Exiting..."
+    exit(1)
+
 # GLOBALS #
 dbname = None
 login = None
@@ -69,11 +76,11 @@ db = None
 ###############################################################################
 ###############################################################################
 ###############################################################################
-def init_db():
+def init_db(login, passwd, dbname):
     """
     Prepares a connection to your MySQL database.
     """
-    global db
+    db = None
     try:
         db = peewee.MySQLDatabase(dbname, user=login, passwd=passwd)
     except Exception, e:
@@ -81,11 +88,12 @@ def init_db():
         db = None
         return
     db.get_conn().set_character_set('utf8')
+    return db
 
 ###############################################################################
 ###############################################################################
 ###############################################################################
-def write_metadb():
+def write_metadb(login, passwd, dbname):
     """
     Creates a file called metadb.py, which contains any database connection related information.
     All subsequent ORM file will import this one to be able to connect. It also enables one more
@@ -104,12 +112,13 @@ and set :
         database=metadb.db
 '''
 import peewee
+from peewee import *
 
 dbname = '%s'
 login = '%s'
 passwd = '%s'
 
-class EnumField(peewee.Field):
+class EnumField(Field):
     '''
     Enables the enum type for peewee.MySQLDatabase to manage.
     (warning note : http://komlenic.com/244/8-reasons-why-mysqls-enum-data-type-is-evil/ )
@@ -119,7 +128,7 @@ class EnumField(peewee.Field):
         self.enum_values = None
         if "values" in kwargs:
             self.enum_values = kwargs["values"]
-        peewee.Field.__init__(self, kwargs)
+        Field.__init__(self, kwargs)
 
     def db_value(self, value):
         if self.enum_values is None:
@@ -132,10 +141,14 @@ class EnumField(peewee.Field):
         return str(value)
 
 setattr(peewee, "EnumField", EnumField)
-peewee.MySQLDatabase.register_fields({'enum': 'ENUM'})
+MySQLDatabase.register_fields({'enum': 'ENUM'})
 
-db = peewee.MySQLDatabase(dbname, user=login, passwd=passwd)
+db = MySQLDatabase(dbname, user=login, passwd=passwd)
 db.get_conn().set_character_set('utf8')
+
+class BaseModel(Model):
+    class Meta:
+        database = db
 
 """%(dbname, login, passwd)
 
@@ -156,19 +169,16 @@ db.get_conn().set_character_set('utf8')
 ###############################################################################
 ###############################################################################
 ###############################################################################
-def get_tables():
+def get_tables(db):
     """
     Queries the database for its tables names.
     """
-    global db
-    sql = "SHOW TABLES"
-    tables = [str(result[0]) for result in db.execute_sql(sql)]
-    return tables
+    return db.get_tables()
 
 ###############################################################################
 ###############################################################################
 ###############################################################################
-def getcolumns(dbname, tablename, *args, **kwargs):
+def getcolumns(db, dbname, tablename, *args):
     """
     Queries the database for fields informations in information_schema.
     Returns the fields from the information_schema you want based on their position.
@@ -198,7 +208,6 @@ def getcolumns(dbname, tablename, *args, **kwargs):
 
     Can serve as a generic function inside another module.
     """
-    global db
     result = []
     sql = "SELECT * FROM information_schema.columns WHERE table_schema='%s' AND table_name = '%s' ORDER BY table_name, ordinal_position"
     for field in db.execute_sql(sql%(dbname,tablename)):
@@ -217,12 +226,12 @@ def getcolumns(dbname, tablename, *args, **kwargs):
 ###############################################################################
 ###############################################################################
 ###############################################################################
-def getforeignkey(table, column):
+def getforeignkey(table, column, login, passwd):
     """
     Retrieves, for a given column, its REFERENCED_TABLE_NAME and REFERENCED_COLUMN_NAME
     under a dictionary form. 
     """
-    dbbuff = peewee.MySQLDatabase("information_schema", user=login, passwd=passwd)
+    dbbuff = init_db(login, passwd, "information_schema")
     sql = "SELECT `REFERENCED_TABLE_NAME`,`REFERENCED_COLUMN_NAME` \
             FROM KEY_COLUMN_USAGE \
             WHERE `TABLE_NAME`='%s' \
@@ -239,11 +248,10 @@ def getforeignkey(table, column):
 ###############################################################################
 ###############################################################################
 ###############################################################################
-def getenumvalues(tabname,colname):
+def getenumvalues(tabname,colname, db):
     """
     Retrieves the possibilities for a given Enum field.
     """
-    global db
     sql = "SHOW COLUMNS FROM %s WHERE Field LIKE '%s'"%(tabname, colname)
     result = db.execute_sql(sql)
     result = [row[1] for row in result]
@@ -253,122 +261,115 @@ def getenumvalues(tabname,colname):
 ###############################################################################
 ###############################################################################
 ###############################################################################
-def write_orm_files(tables):
+def write_orm_files(db, dbname, login, passwd):
     """
     Uses the column definitions to generate peewee ORM files.
     """
     possibilities = {
-        "Bare": "Bare",
-        "bigint": "BigInteger",
-        "blob":"Blob",
-        "bool":"Boolean",
-        "char":"Char",
-        "date":"Date",
-        "decimal":"Decimal",
-        "double":"Double",
-        "enum":"Enum",
-        "float":"Float",
-        "foreignkey":"ForeignKey",
-        "int":"Integer",
-        "text":"Text",
-        "time":"Time",
-        "serial":"BigInteger",
-        "year":"Time"
+        "Bare" : BareStructure,
+        "bigint" : BigIntegerStructure,
+        "blob" : BlobStructure,
+        "bool" : BooleanStructure,
+        "char" : CharStructure,
+        "date" : DateStructure,
+        "decimal" : DecimalStructure,
+        "double" : DoubleStructure,
+        "enum" : EnumStructure,
+        "float" : FloatStructure,
+        "foreignkey" : ForeignKeyStructure,
+        "int" : IntegerStructure,
+        "text": TextStructure,
+        "time": TimeStructure,
+        "serial": SerialStructure,
+        "year": YearStructure
     }
 
-    for tablename in tables:
+    for tablename in get_tables(db):
         print "    Processing %s..."%tablename
-        primary_key = []
-        fields = []
-        fieldnames = []
-        fieldtypes = []
-        foreignkeys = {}
-        enum_values = {}
-        char_length = {}
-        decimals = {}
-        unique_key = []
-        for result in getcolumns(dbname, tablename, 3, 15, 16): # 3 = colname, 15 = coltype, 16 = Primary / FK ?
-            fieldnames.append(result[0])
+
+        fieldlist = StructureList()
+        
+        
+        
+
+        for result in getcolumns(db, dbname, tablename, 3, 15, 16): # 3 = colname, 15 = coltype, 16 = Primary / FK ?
+            fieldtype = None
+            primary_key = False
+            unique = False
+            default = None
+            max_digits = 10
+            decimal_places = 5
+            max_length = 255
+            reftable = None
+            related_name = None
+            enum_values = None
+            decimals = ()
+            # What to do with result[0] (colname)
             in_keys = False
             if result[2] in ["MUL", "PRI"]:
-                fk = getforeignkey(tablename, result[0])
+                fk = getforeignkey(tablename, result[0], login, passwd)
                 if fk is not None:
-                    fieldtypes.append("foreignkey")
-                    foreignkeys.update(fk)
+                    fieldtype = "foreignkey"
+                    reftable = fk[result[0]]["reftable"]
+                    related_name = fk[result[0]]["refcol"]
                 if "PRI" in result[2]:
                     if fk is None:
-                        fieldtypes.append("int")
-                    primary_key.append(result[0])
+                        fieldtype = "int"
+                    primary_key = True
             else:
                 for key in possibilities:
                     if key in result[1]:
                         in_keys = True
-                        fieldtypes.append(key)
+                        fieldtype = key
                         if "decimal" in key:
                             # Parse the Decimal definition to get digits and precison
                             buff = result[1].split("decimal")[1]
-                            decimals.update({result[0]:ast.literal_eval(buff)})
+                            decimals = ast.literal_eval(buff)
+                            max_digits = decimals[0]
+                            decimal_places = decimals[1]
                         if "enum" in key:
-                            enum_values.update(getenumvalues(tablename, result[0]))
+                            enum_values = getenumvalues(tablename, result[0], db)[result[0]]
                         if "char" in key:
-                            buff = int(result[1].split("char")[1].lstrip("(").rstrip(")"))
-                            char_length.update({result[0]:buff})
+                            max_length = int(result[1].split("char")[1].lstrip("(").rstrip(")"))
                         if "UNI" in result[2] :
-                            unique_key.append(result[0])
+                            unique = True
                         break
                 # Uknown data type ? => BareField.
                 if in_keys == False:
-                    fieldtypes.append("Bare")
+                    fieldtype = "Bare"
                     print "Couldn't determine field type of %s.%s. BareField() selected."%(result[0],result[1])
+            fieldlist.append(
+                possibilities[fieldtype](name = result[0], primary_key = primary_key, values = enum_values, unique = unique, default = default, max_digits = max_digits, decimal_places = decimal_places, max_length = max_length, reftable = reftable, related_name = related_name)
+            )
+        # Writing out the file !
         basetext = """#!/usr/bin/env python2.7
 #-*-encoding: utf-8-*-
 
-import peewee
-import metadb
+from peewee import *
+from metadb import *
 """
-        for tabname in foreignkeys:
-            basetext += "import %s\n"%foreignkeys[tabname]["reftable"]
+        for tabname in fieldlist.get_foreign_keys():
+            basetext += "from %s import %s\n"%(tabname.reftable, tabname.reftable)
         basetext += """
-class %s(peewee.Model):
+class %s(BaseModel):
 """
         openedfile = open(dbname+"/"+tablename+".py", "w+")
         openedfile.write(basetext%tablename)
         # Write all fields
-        for index in xrange(len(fieldnames)):
-            openedfile.write("    "+fieldnames[index]+" = ")
-            openedfile.write("peewee."+possibilities[fieldtypes[index]]+"Field(")
-
-            if "Char" in possibilities[fieldtypes[index]]:
-                openedfile.write("max_length = "+str(char_length[fieldnames[index]]))
-
-            if "ForeignKey" in possibilities[fieldtypes[index]]:
-                openedfile.write(foreignkeys[fieldnames[index]]["reftable"]+"."+foreignkeys[fieldnames[index]]["reftable"])
-                openedfile.write(", related_name = 'fk_"+tablename+"_"+foreignkeys[fieldnames[index]]["reftable"]+"'")
-
-            if "Decimal" in possibilities[fieldtypes[index]]:
-                openedfile.write("max_digits = "+str(decimals[fieldnames[index]][0])+", decimal_places = "+str(decimals[fieldnames[index]][1])+", auto_round = True")
-
-            if "Enum" in possibilities[fieldtypes[index]]:
-                openedfile.write("values="+str(enum_values[fieldnames[index]]))
-
-            if len(primary_key) == 1 and fieldnames[index] in primary_key:
-                if possibilities[fieldtypes[index]] in ["Char", "Decimal", "ForeignKey"]:
-                    openedfile.write(", ")
-                openedfile.write("primary_key = True")
-
-            if fieldnames[index] in unique_key:
-                openedfile.write(", unique = True")
-            openedfile.write(")\n")
-            
-        openedfile.write("""    class Meta:
-        database=metadb.db
-""")
+        for field in fieldlist:
+            line = str(field)
+            if "primary_key = True" in line and len(fieldlist.get_primary_keys()) > 1:
+                line = "".join(line.split(", primary_key = True"))
+                line = "".join(line.split("primary_key = True"))
+            openedfile.write("    %s\n"%line)
         
-        if len(primary_key) > 1:
-            openedfile.write("        primary_key=peewee.CompositeKey(")
-            for key in primary_key:
-                openedfile.write("'"+key+"'")
-                if key != primary_key[-1]:
+        if len(fieldlist.get_primary_keys()) > 1:
+            openedfile.write("    class Meta:\n")
+            openedfile.write("        primary_key=CompositeKey(")
+            keys = fieldlist.get_primary_keys()
+            for index in xrange(len(keys)):
+                openedfile.write("'"+keys[index].name+"'")
+                if index != len(keys) - 1:
                     openedfile.write(", ")
             openedfile.write(")\n")
         openedfile.close()
@@ -376,7 +377,7 @@ class %s(peewee.Model):
 ###############################################################################
 ###############################################################################
 ###############################################################################
-def write_module_init():
+def write_module_init(dbname):
     if os.path.isfile(dbname+"/__init__.py"):
         os.remove(dbname+"/__init__.py")
     index = """#!/usr/bin/env python2.7
@@ -411,13 +412,11 @@ if __name__ == "__main__":
     passwd = sys.argv[2]
     
     print "INIT DB"
-    init_db()
+    db = init_db(login, passwd, dbname)
     print "WRITE METADB"
-    write_metadb()
-    print "RETRIEVE TABLES"
-    tables = get_tables()
+    write_metadb(login, passwd, dbname)
     print "WRITE ORM FILES"
-    write_orm_files(tables)
+    write_orm_files(db, dbname, login, passwd)
     print "WRITE MODULE INIT"
-    write_module_init()
+    write_module_init(dbname)
     print "DONE"
