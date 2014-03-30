@@ -179,15 +179,20 @@ class ForeignKeyStructure(BaseFieldStructure):
                 self.related_name = None
         except:
             self.reftable = None
+        try:
+            self.tablename = kwargs["tablename"]
+        except:
+            self.tablename = "None"
+        self.related_name = "fk_" + self.tablename + "_" + self.related_name
         BaseFieldStructure.__init__(self, *args, **kwargs)
     def __str__(self):
         result = self.name + " = ForeignKeyField("
         if self.reftable is not None:
             result += self.reftable
             if self.related_name is not None:
-                result += ", related_name = 'fk_"+ self.name+ "_" + self.related_name+ "'"
+                result += ", related_name = '" + self.related_name + "'"
             self.coma_needed = True
-        result += BaseFieldStructure.__str__(self) + ")"
+        result += BaseFieldStructure.__str__(self) + "); " + self.name + ".db_column = \"" + self.name + "\""
         return result
 
 class IntegerStructure(BaseFieldStructure):
@@ -241,3 +246,13 @@ class StructureList(list):
 
     def get_foreign_keys(self):
         return [i for i in self if i.__class__.__name__ == "ForeignKeyStructure"]
+
+    def set_up_foreign_keys(self):
+        foreign_keys = {}
+        for fkey in self.get_foreign_keys():
+            if fkey.related_name in foreign_keys:
+                foreign_keys.update({fkey.related_name : foreign_keys[fkey.related_name] + 1})
+                fkey.related_name = fkey.related_name + "_" + str(foreign_keys[fkey.related_name])
+            else:
+                foreign_keys.update({fkey.related_name:0})
+                

@@ -43,14 +43,14 @@ Used as an executable, it takes three arguments:
 
 Foreign Keys are correctly generated only if both
 tables are in the same database.
-Any FK dependancy module is import'ed.
+Any FK dependancy module is import'ed in the generated file.
 """
 
 # IMPORTS #
 import ast
 import os
 import shutil
-import sys
+# import sys # imported in if __name__ == "__main__"
 
 # NON-STANDARD IMPORTS #
 try:
@@ -62,15 +62,9 @@ except ImportError:
 # LOCAL IMPORTS #
 try:
     from peeweemysqldata import *
-except ImportError:
-    print "Error importing data structures. Exiting..."
+except ImportError, i:
+    print "Error importing data structures : %s", str(i)
     exit(1)
-
-# GLOBALS #
-dbname = None
-login = None
-passwd = None
-db = None
 
 # FUNCTIONS #
 ###############################################################################
@@ -288,9 +282,6 @@ def write_orm_files(db, dbname, login, passwd):
         print "    Processing %s..."%tablename
 
         fieldlist = StructureList()
-        
-        
-        
 
         for result in getcolumns(db, dbname, tablename, 3, 15, 16): # 3 = colname, 15 = coltype, 16 = Primary / FK ?
             fieldtype = None
@@ -304,7 +295,6 @@ def write_orm_files(db, dbname, login, passwd):
             related_name = None
             enum_values = None
             decimals = ()
-            # What to do with result[0] (colname)
             in_keys = False
             if result[2] in ["MUL", "PRI"]:
                 fk = getforeignkey(tablename, result[0], login, passwd)
@@ -319,18 +309,23 @@ def write_orm_files(db, dbname, login, passwd):
             else:
                 for key in possibilities:
                     if key in result[1]:
+
                         in_keys = True
                         fieldtype = key
+
                         if "decimal" in key:
                             # Parse the Decimal definition to get digits and precison
                             buff = result[1].split("decimal")[1]
                             decimals = ast.literal_eval(buff)
                             max_digits = decimals[0]
                             decimal_places = decimals[1]
+
                         if "enum" in key:
                             enum_values = getenumvalues(tablename, result[0], db)[result[0]]
+
                         if "char" in key:
                             max_length = int(result[1].split("char")[1].lstrip("(").rstrip(")"))
+
                         if "UNI" in result[2] :
                             unique = True
                         break
@@ -339,17 +334,19 @@ def write_orm_files(db, dbname, login, passwd):
                     fieldtype = "Bare"
                     print "Couldn't determine field type of %s.%s. BareField() selected."%(result[0],result[1])
             fieldlist.append(
-                possibilities[fieldtype](name = result[0], primary_key = primary_key, values = enum_values, unique = unique, default = default, max_digits = max_digits, decimal_places = decimal_places, max_length = max_length, reftable = reftable, related_name = related_name)
+                possibilities[fieldtype](name = result[0], tablename = tablename, primary_key = primary_key, values = enum_values, unique = unique, default = default, max_digits = max_digits, decimal_places = decimal_places, max_length = max_length, reftable = reftable, related_name = related_name)
             )
-        # Writing out the file !
+            fieldlist.set_up_foreign_keys()
+        # Write the file out !
         basetext = """#!/usr/bin/env python2.7
 #-*-encoding: utf-8-*-
 
 from peewee import *
 from metadb import *
 """
-        for tabname in fieldlist.get_foreign_keys():
-            basetext += "from %s import %s\n"%(tabname.reftable, tabname.reftable)
+        for fkey in fieldlist.get_foreign_keys():
+            # Update basetext with needed imports for foreign keys
+            basetext += "from %s import %s\n"%(fkey.reftable, fkey.reftable)
         basetext += """
 class %s(BaseModel):
 """
@@ -402,6 +399,8 @@ __all__=[
 ###############################################################################
 ###############################################################################
 if __name__ == "__main__":
+    import sys
+
     print "MAIN"
     if len(sys.argv) < 4:
         print "Usage : peeweemysqlobjects.py login password dbname"
