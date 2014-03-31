@@ -92,7 +92,7 @@ def init_db(login, passwd, dbname):
 ################################################################################
 ################################################################################
 def get_version():
-    return "0.1.0.3"
+    return "0.1.0.4"
 
 ################################################################################
 ################################################################################
@@ -392,7 +392,7 @@ def write_orm_files(db, dbname, login, passwd):
 #-*-encoding: utf-8-*-
 
 from peewee import *
-from _metadb_ import *
+from __metadb__ import *
 """
         for fkey in fieldlist.get_foreign_keys():
             # Update basetext with needed imports for foreign keys

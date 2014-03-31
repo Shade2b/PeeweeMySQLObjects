@@ -19,7 +19,7 @@ RESTRICTION
 * Logged user must have the PROCESS privilege to query the INNODB_SYS_FOREIGN table, if applicable.
 
 TODO
-* SOLVE THE FOREIGN KEY "_id" ISSUE (created by https://github.com/coleifer/peewee/blob/master/peewee.py line 895) [SEEMS TO WORK]
+* SOLVE THE FOREIGN KEY "_id" ISSUE (created by https://github.com/coleifer/peewee/blob/master/peewee.py line 895) [SEEMS WORKING]
 * and some more...
 
 WHAT'S DONE
