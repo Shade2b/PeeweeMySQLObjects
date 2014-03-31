@@ -85,28 +85,28 @@ class BareStructure(BaseFieldStructure):
     def __init__(self, *args, **kwargs):
         BaseFieldStructure.__init__(self, *args, **kwargs)
     def __str__(self):
-        return self.name + " = BareField(" +
+        return self.name + " = BareField(" + \
             BaseFieldStructure.__str__() + ")"
 
 class BigIntegerStructure(BaseFieldStructure):
     def __init__(self, *args, **kwargs):
         BaseFieldStructure.__init__(self, *args, **kwargs)
     def __str__(self):
-        return self.name + " = BigIntegerField(" +
+        return self.name + " = BigIntegerField(" + \
             BaseFieldStructure.__str__(self) + ")"
 
 class BlobStructure(BaseFieldStructure):
     def __init__(self, *args, **kwargs):
         BaseFieldStructure.__init__(self, *args, **kwargs)
     def __str__(self):
-        return self.name + " = BlobField(" + 
+        return self.name + " = BlobField(" + \
             BaseFieldStructure.__str__(self) + ")"
 
 class BooleanStructure(BaseFieldStructure):
     def __init__(self, *args, **kwargs):
         BaseFieldStructure.__init__(self, *args, **kwargs)
     def __str__(self):
-        return self.name + " = BooleanField(" +
+        return self.name + " = BooleanField(" + \
             BaseFieldStructure.__str__(self) + ")"
 
 class CharStructure(BaseFieldStructure):
@@ -129,7 +129,7 @@ class DateStructure(BaseFieldStructure):
     def __init__(self, *args, **kwargs):
         BaseFieldStructure.__init__(self, *args, **kwargs)
     def __str__(self):
-        return self.name + " = DateField(" +
+        return self.name + " = DateField(" + \
             BaseFieldStructure.__str__(self) + ")"
 
 class DecimalStructure(BaseFieldStructure):
@@ -155,7 +155,7 @@ class DoubleStructure(BaseFieldStructure):
     def __init__(self, *args, **kwargs):
         BaseFieldStructure.__init__(self, *args, **kwargs)
     def __str__(self):
-        return self.name + " = DoubleField(" +
+        return self.name + " = DoubleField(" + \
             BaseFieldStructure.__str__(self) + ")" 
 
 class EnumStructure(BaseFieldStructure):
@@ -177,7 +177,7 @@ class FloatStructure(BaseFieldStructure):
     def __init__(self, *args, **kwargs):
         BaseFieldStructure.__init__(self, *args, **kwargs)
     def __str__(self):
-        result = self.name + " = FloatField(" +
+        result = self.name + " = FloatField(" + \
             BaseFieldStructure.__str__(self) + ")"
         return result
 
@@ -195,7 +195,7 @@ class ForeignKeyStructure(BaseFieldStructure):
             self.tablename = kwargs["tablename"]
         except:
             self.tablename = "None"
-        self.related_name = "fk_" + self.tablename + 
+        self.related_name = "fk_" + self.reftable + \
             "_" + self.related_name
         BaseFieldStructure.__init__(self, *args, **kwargs)
     def __str__(self):
@@ -213,21 +213,21 @@ class IntegerStructure(BaseFieldStructure):
     def __init__(self, *args, **kwargs):
         BaseFieldStructure.__init__(self, *args, **kwargs)
     def __str__(self):
-        return self.name + " = IntegerField(" +
+        return self.name + " = IntegerField(" + \
             BaseFieldStructure.__str__(self) + ")"
 
 class TextStructure(BaseFieldStructure):
     def __init__(self, *args, **kwargs):
         BaseFieldStructure.__init__(self, *args, **kwargs)
     def __str__(self):
-        return self.name + " = TextField(" +
+        return self.name + " = TextField(" + \
             BaseFieldStructure.__str__(self) + ")"
 
 class TimeStructure(BaseFieldStructure):
     def __init__(self, *args, **kwargs):
         BaseFieldStructure.__init__(self, *args, **kwargs)
     def __str__(self):
-        return self.name + " = TimeField(" +
+        return self.name + " = TimeField(" + \
             BaseFieldStructure.__str__(self) + ")"
 
 class SerialStructure(BigIntegerStructure):
@@ -255,13 +255,13 @@ class StructureList(list):
         for instance in args:
             if not hasattr(instance, "__str__"):
                 raise ValueError("Unable to append element "+ str(instance))
-            if hasattr(instance, "primary_key") and
+            if hasattr(instance, "primary_key") and \
                 instance.primary_key == True:
                 self.primary_keys.append(instance)
         list.append(self, *args, **kwargs)
 
     def __getitem__(self, index):
-        return list.__getitem__(self, index), 
+        return list.__getitem__(self, index),  \
             list.__getitem__(self, index).__str__()
 
     def get_primary_keys(self):
@@ -278,7 +278,7 @@ class StructureList(list):
                 foreign_keys.update(
                     {fkey.related_name : foreign_keys[fkey.related_name] + 1}
                 )
-                fkey.related_name = fkey.related_name + "_" +
+                fkey.related_name = fkey.related_name + "_" + \
                     str(foreign_keys[fkey.related_name])
             else:
                 foreign_keys.update({fkey.related_name:0})

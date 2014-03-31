@@ -8,6 +8,7 @@ Even though Pwiz exists, I coded this before knowing about it. I proceeded to ad
 
 COMPATIBILITY
 * Not compatible with PostgreSQL or SQLite ! MySQL only.
+* Works best with the InnoDB engine. Works with the MyISAM engine.
 * Compatible with Windows, Linux and Mac.
 
 USAGE
