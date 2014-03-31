@@ -51,6 +51,7 @@ Any FK dependancy module is import'ed in the generated file.
 import ast
 import os
 import shutil
+import time
 # import sys # imported in if __name__ == "__main__"
 
 # NON-STANDARD IMPORTS #
@@ -154,6 +155,7 @@ class BaseModel(Model):
 
     if os.path.isdir(dbname):
         shutil.rmtree(dbname)
+        time.sleep(1)
     if not os.path.isdir(dbname):
         os.mkdir(dbname)
     # Delete old metadb for new connections
@@ -296,7 +298,7 @@ def write_orm_files(db, dbname, login, passwd):
 
         fieldlist = StructureList()
 
-        for result in getcolumns(db, dbname, tablename, 3, 15, 16): 
+        for result in getcolumns(db, dbname, tablename, 3, 15, 16):
             # 3 = colname, 15 = coltype, 16 = Primary / FK ?
             fieldtype = None
             primary_key = False
@@ -320,7 +322,7 @@ def write_orm_files(db, dbname, login, passwd):
                     if fk is None:
                         fieldtype = "int"
                     primary_key = True
-            else:
+            if fieldtype is None:
                 for key in possibilities:
                     if key in result[1]:
 
@@ -356,7 +358,6 @@ def write_orm_files(db, dbname, login, passwd):
             fieldlist.append(
                 possibilities[fieldtype](
                     name = result[0], 
-                    tablename = tablename, 
                     primary_key = primary_key, 
                     values = enum_values, 
                     unique = unique, 
@@ -386,7 +387,7 @@ class %s(BaseModel):
         # Write all fields
         for field in fieldlist:
             line = str(field)
-            if "primary_key = True" in line 
+            if "primary_key = True" in line \
                 and len(fieldlist.get_primary_keys()) > 1:
                 line = "".join(line.split(", primary_key = True"))
                 line = "".join(line.split("primary_key = True"))
@@ -444,10 +445,10 @@ if __name__ == "__main__":
     
     print "INIT DB"
     db = init_db(login, passwd, dbname)
-    print "WRITE METADB"
+    print "WRITE metadb.py"
     write_metadb(login, passwd, dbname)
     print "WRITE ORM FILES"
     write_orm_files(db, dbname, login, passwd)
-    print "WRITE MODULE INIT"
+    print "WRITE MODULE __init__.py FILE"
     write_module_init(dbname)
     print "DONE"

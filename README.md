@@ -8,6 +8,7 @@ Even though Pwiz exists, I coded this before knowing about it. I proceeded to ad
 
 COMPATIBILITY
 * Not compatible with PostgreSQL or SQLite ! MySQL only.
+* Works best with the InnoDB engine. Works with the MyISAM engine.
 * Compatible with Windows, Linux and Mac.
 
 USAGE
@@ -17,11 +18,15 @@ RESTRICTION
 Logged user must be able to read from the information_schema database.
 
 TODO
-* SOLVE THE FOREIGN KEY "_id" ISSUE (created by https://github.com/coleifer/peewee/blob/master/peewee.py line 895) [TO BE TESTED]
+* SOLVE THE FOREIGN KEY "_id" ISSUE (created by https://github.com/coleifer/peewee/blob/master/peewee.py line 895) [SEEMS TO WORK]
 * on_update and on_delete actions for foreign keys
-* better naming system for "related_name"s [DONE]
-* clean-up of global variables (dbname, login, passwd). They can't be used when importing parts of the module like "from peeweemysqlobjects import get_tables" [TO BE TESTED]
 * and some more...
+
+WHAT'S DONE
+* better naming system for "related_name"s
+    * related_names will now have an underscore followed by a number appended starting with the second occurence of a foreign key on the same foreign table.
+* clean-up of global variables (dbname, login, passwd). They can't be used when importing parts of the module like "from peeweemysqlobjects import get_tables"
+    * Clean-up done, no more globals.
 
 KNOWN ISSUES & TROUBLESHOOTING
 * More related to peewee. Any Foreign key will have a "_id" appended. It can create situations like this one : your table has a Foreign key column named tablename_Id, 
