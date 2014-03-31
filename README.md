@@ -12,11 +12,11 @@ COMPATIBILITY
 * Compatible with Windows, Linux and Mac. 
 
 USAGE
-$ peeweemysqlobject userlogin passwd databaseName
+* $ peeweemysqlobject userlogin passwd databaseName
 
 RESTRICTION
-Logged user must be able to read from the information_schema database.
-Logged user must have the PROCESS privilege to query the INNODB_SYS_FOREIGN table, if applicable.
+* Logged user must be able to read from the information_schema database.
+* Logged user must have the PROCESS privilege to query the INNODB_SYS_FOREIGN table, if applicable.
 
 TODO
 * SOLVE THE FOREIGN KEY "_id" ISSUE (created by https://github.com/coleifer/peewee/blob/master/peewee.py line 895) [SEEMS TO WORK]

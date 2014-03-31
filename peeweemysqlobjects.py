@@ -67,7 +67,7 @@ except ImportError:
 try:
     from peeweemysqldata import *
 except ImportError, i:
-    print "Error importing data structures : %s", str(i)
+    print "Error importing data structures : %s"%str(i)
     exit(1)
 
 # FUNCTIONS #
@@ -84,7 +84,7 @@ def init_db(login, passwd, dbname):
     except Exception, e:
         print e
         db = None
-        return
+        return db
     db.get_conn().set_character_set('utf8')
     return db
 
@@ -92,7 +92,7 @@ def init_db(login, passwd, dbname):
 ################################################################################
 ################################################################################
 def get_version():
-    return "1.0.0.0"
+    return "0.1.0.0"
 
 ################################################################################
 ################################################################################
@@ -165,23 +165,14 @@ class BaseModel(Model):
     if not os.path.isdir(dbname):
         os.mkdir(dbname)
     # Delete old metadb for new connections
-    if os.path.isfile(dbname+"/metadb.py"):
-        os.remove(dbname+"/metadb.py")
+    if os.path.isfile(dbname+"/_metadb_.py"):
+        os.remove(dbname+"/_metadb_.py")
     # Create the metadb.py file. 
     # It contains everything needed to connect to your database.
-    if not os.path.isfile(dbname+"/metadb.py"):
-        openedfile = open(dbname+"/metadb.py", "w+")
+    if not os.path.isfile(dbname+"/_metadb_.py"):
+        openedfile = open(dbname+"/_metadb_.py", "w+")
         openedfile.write(metadb)
     openedfile.close()
-
-################################################################################
-################################################################################
-################################################################################
-def get_tables(db):
-    """
-    Queries the database for its tables names.
-    """
-    return db.get_tables()
 
 ################################################################################
 ################################################################################
@@ -306,7 +297,7 @@ def write_orm_files(db, dbname, login, passwd):
         "year": YearStructure
     }
 
-    for tablename in get_tables(db):
+    for tablename in db.get_tables():
         print "    Processing %s..."%tablename
 
         fieldlist = StructureList()
@@ -393,7 +384,7 @@ def write_orm_files(db, dbname, login, passwd):
 #-*-encoding: utf-8-*-
 
 from peewee import *
-from metadb import *
+from _metadb_ import *
 """
         for fkey in fieldlist.get_foreign_keys():
             # Update basetext with needed imports for foreign keys
@@ -469,10 +460,11 @@ if __name__ == "__main__":
     
     print "INIT DB"
     db = init_db(login, passwd, dbname)
-    print "WRITE metadb.py"
-    write_metadb(login, passwd, dbname)
-    print "WRITE ORM FILES"
-    write_orm_files(db, dbname, login, passwd)
-    print "WRITE MODULE __init__.py FILE"
-    write_module_init(dbname)
-    print "\nAND IT'S DONE ! Enjoy your MySQL db in Python !"
+    if db is not None:
+        print "WRITE metadb.py"
+        write_metadb(login, passwd, dbname)
+        print "WRITE ORM FILES"
+        write_orm_files(db, dbname, login, passwd)
+        print "WRITE MODULE __init__.py FILE"
+        write_module_init(dbname)
+        print "\nAND IT'S DONE ! Enjoy your MySQL db in Python !"

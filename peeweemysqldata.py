@@ -118,7 +118,7 @@ class CharStructure(BaseFieldStructure):
             pass
         BaseFieldStructure.__init__(self, *args, **kwargs)
     def __str__(self):
-        result = self.name + " = CharField(%s"%self.max_length
+        result = self.name + " = CharField(max_length = %s"%self.max_length
         if self.primary_key == True or self.unique == True:
             result += ", "
         result += BaseFieldStructure.__str__(self)
