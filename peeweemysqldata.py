@@ -260,7 +260,7 @@ class ForeignKeyStructure(BaseFieldStructure):
                 for key in self.types:
                     if (key & self.constraints) == key:
                         result += ", "+self.types[key]
-        result += BaseFieldStructure.__str__(self) + "); "
+        result += BaseFieldStructure.__str__(self) + ")"
         return result
 
 ################################################################################

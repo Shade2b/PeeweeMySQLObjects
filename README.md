@@ -25,7 +25,6 @@ TODO
 WHAT'S DONE
 * better naming system for "related_name"s
     * related_names will now have an underscore followed by a number appended starting with the second occurence of a foreign key on the same foreign table (eg. "fk_reftable_refcol_num").
-    * bug : if two tables have a foreign key on the same table, then a related_name collision happens. This has been fixed using the same system of _num.
 * clean-up of global variables (dbname, login, passwd). They can't be used when importing parts of the module like "from peeweemysqlobjects import get_tables"
     * Clean-up done, no more glaring global.
 * on_update and on_delete actions for foreign keys
