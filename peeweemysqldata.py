@@ -112,14 +112,10 @@ class BooleanStructure(BaseFieldStructure):
 class CharStructure(BaseFieldStructure):
     def __init__(self, max_length = 255, *args, **kwargs):
         self.max_length = max_length
-        try:
-            kwargs["default"] = "\""+kwargs["default"]+"\""
-        except:
-            pass
         BaseFieldStructure.__init__(self, *args, **kwargs)
     def __str__(self):
         result = self.name + " = CharField(max_length = %s"%self.max_length
-        if self.primary_key == True or self.unique == True:
+        if self.primary_key == True or self.unique == True or self.default is not None:
             result += ", "
         result += BaseFieldStructure.__str__(self)
         result += ")"
@@ -181,54 +177,19 @@ class FloatStructure(BaseFieldStructure):
             BaseFieldStructure.__str__(self) + ")"
         return result
 
-class ForeignKeyStructure(BaseFieldStructure):
-    def __init__(self, *args, **kwargs):
-
-        self.types = {
-            1: "on_delete = \"CASCADE\"",
-            2: "on_update = \"SET NULL\"",
-            4: "on_update = \"CASCADE\"",
-            8: "on_delete = \"SET NULL\"",
-            16: "on_delete = \"NO ACTION\"", # on_delete = "RESTRICT"
-            32: "on_update = \"NO ACTION\"" # on_update = "RESTRICT"
-        }
-
-        try:
-            self.reftable = kwargs["reftable"]
-            try:
-                self.related_name = kwargs["related_name"]
-            except:
-                self.related_name = "NullName"
-        except:
-            self.reftable = "NullRefTable"
-            self.related_name = "NullName"
-        try:
-            self.constraints = kwargs["constype"]
-        except:
-            self.constaints = 48
-        self.related_name = "fk_" + self.reftable + \
-            "_" + self.related_name
-        BaseFieldStructure.__init__(self, *args, **kwargs)
-    def __str__(self):
-        result = self.name + " = ForeignKeyField("
-        if self.reftable is not None:
-            result += self.reftable
-            if self.related_name is not None:
-                result += ", related_name = '" + self.related_name + "'"
-            self.coma_needed = True
-            result += ", db_column = \"" + self.name + "\""
-            for key in self.types:
-                if (key & self.constraints) == key:
-                    result += ", "+self.types[key]
-        result += BaseFieldStructure.__str__(self) + "); "
-        return result
-
 class IntegerStructure(BaseFieldStructure):
     def __init__(self, *args, **kwargs):
+        try:
+            self.auto_increment = kwargs["auto_increment"]
+        except:
+            self.auto_increment = False
         BaseFieldStructure.__init__(self, *args, **kwargs)
     def __str__(self):
-        return self.name + " = IntegerField(" + \
-            BaseFieldStructure.__str__(self) + ")"
+        result = self.name + " = IntegerField("
+        if self.auto_increment == True:
+            result += "auto_increment = True, "
+        result += BaseFieldStructure.__str__(self) + ")"
+        return result
 
 class TextStructure(BaseFieldStructure):
     def __init__(self, *args, **kwargs):
@@ -259,7 +220,52 @@ class YearStructure(TimeStructure):
 ################################################################################
 ################################################################################
 ################################################################################
+class ForeignKeyStructure(BaseFieldStructure):
+    def __init__(self, *args, **kwargs):
 
+        self.types = {
+            1: "on_delete = \"CASCADE\"",
+            2: "on_update = \"SET NULL\"",
+            4: "on_update = \"CASCADE\"",
+            8: "on_delete = \"SET NULL\"",
+            16: "on_delete = \"NO ACTION\"", # same as on_delete = "RESTRICT"
+            32: "on_update = \"NO ACTION\"" # same as on_update = "RESTRICT"
+        }
+
+        try:
+            self.reftable = kwargs["reftable"]
+            try:
+                self.related_name = kwargs["related_name"]
+            except:
+                self.related_name = "NullName"
+        except:
+            self.reftable = "NullRefTable"
+            self.related_name = "NullName"
+        try:
+            self.constraints = kwargs["constype"]
+        except:
+            self.constaints = 48
+        self.related_name = "fk_" + self.reftable + \
+            "_" + self.related_name
+        BaseFieldStructure.__init__(self, *args, **kwargs)
+    def __str__(self):
+        result = self.name + " = ForeignKeyField("
+        if self.reftable is not None:
+            result += self.reftable
+            if self.related_name is not None:
+                result += ", related_name = '" + self.related_name + "'"
+            self.coma_needed = True
+            result += ", db_column = \"" + self.name + "\""
+            if self.constraints is not None:
+                for key in self.types:
+                    if (key & self.constraints) == key:
+                        result += ", "+self.types[key]
+        result += BaseFieldStructure.__str__(self) + "); "
+        return result
+
+################################################################################
+################################################################################
+################################################################################
 class StructureList(list):
     foreign_keys = {}
 
@@ -289,11 +295,12 @@ class StructureList(list):
 
     def set_up_foreign_keys(self):
         for fkey in self.get_foreign_keys():
-            if fkey.related_name in self.foreign_keys:
+            if fkey.related_name not in self.foreign_keys:
+                self.foreign_keys.update({fkey.related_name:0})
+            else:
                 self.foreign_keys.update(
-                    {fkey.related_name : self.foreign_keys[fkey.related_name] + 1}
+                    {fkey.related_name : self.foreign_keys[fkey.related_name]+1}
                 )
+
                 fkey.related_name = fkey.related_name + "_" + \
                     str(self.foreign_keys[fkey.related_name])
-            else:
-                self.foreign_keys.update({fkey.related_name:0})

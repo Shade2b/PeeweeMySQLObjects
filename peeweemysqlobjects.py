@@ -92,14 +92,14 @@ def init_db(login, passwd, dbname):
 ################################################################################
 ################################################################################
 def get_version():
-    return "0.1.0.0"
+    return "0.1.0.2"
 
 ################################################################################
 ################################################################################
 ################################################################################
 def write_metadb(login, passwd, dbname):
     """
-    Creates a file called metadb.py, which contains 
+    Creates a file called __metadb__.py, which contains 
     any database connection related information.
     All subsequent ORM file will import this one to 
     be able to connect. It also enables one more
@@ -109,13 +109,8 @@ def write_metadb(login, passwd, dbname):
 #-*-encoding: utf-8-*-
 '''
 Meta-informations about the database.
-It includes two new types for MySQLDatabase to manage :
+It includes a new types for MySQLDatabase to manage :
     EnumField
-    DecimalField
-For any peewee.Model subclass, import this module
-and set :
-    class Meta:
-        database=metadb.db
 '''
 import peewee
 from peewee import *
@@ -159,18 +154,18 @@ class BaseModel(Model):
 
 """%(dbname, login, passwd)
 
+    
     if os.path.isdir(dbname):
         shutil.rmtree(dbname)
         time.sleep(1)
     if not os.path.isdir(dbname):
         os.mkdir(dbname)
-    # Delete old metadb for new connections
-    if os.path.isfile(dbname+"/_metadb_.py"):
-        os.remove(dbname+"/_metadb_.py")
-    # Create the metadb.py file. 
-    # It contains everything needed to connect to your database.
-    if not os.path.isfile(dbname+"/_metadb_.py"):
-        openedfile = open(dbname+"/_metadb_.py", "w+")
+    filename = dbname+"/__metadb__.py"
+    # Create the __metadb__.py file. 
+    # It contains everything needed to connect to your database
+    # using the credentials you provided.
+    if not os.path.isfile(filename):
+        openedfile = open(filename, "w+")
         openedfile.write(metadb)
     openedfile.close()
 
@@ -206,14 +201,14 @@ def getcolumns(db, dbname, tablename, *args):
     18: the priviliges
     19: the column comment
     """
-    result = []
+    result = {}
     sql = "SELECT * FROM information_schema.columns WHERE table_schema='%s' \
             AND table_name = '%s' ORDER BY table_name, ordinal_position"
     for field in db.execute_sql(sql%(dbname,tablename)):
-        buff = ()
+        buff = {}
         for arg in args:
             try:
-                buff += (str(field[arg]),)
+                buff.update({arg:str(field[arg])})
             except Exception, e:
                 print "Error occured after %s.%s"%(
                     tablename,
@@ -221,8 +216,8 @@ def getcolumns(db, dbname, tablename, *args):
                 )
                 print e
                 print "\nResuming..."
-                buff += ("None",)
-        result.append(buff)
+                buff.update({arg:"None"})
+        result.update({field[3]:buff})
     return result
 
 ################################################################################
@@ -249,13 +244,15 @@ def getforeignkey(dbname, table, column, login, passwd):
         sql = "SELECT `TYPE` FROM `INNODB_SYS_FOREIGN` \
             WHERE `FOR_NAME` LIKE \"%s/%s\" \
             AND `REF_NAME` LIKE \"%s/%s\""%(
-                dbname, result[0][1],
-                dbname, table
+                dbname, table,
+                dbname, result[0][0]
             )
-        constype = 48
+        constype = None
         for row in dbbuff.execute_sql(sql):
             constype = row[0]
-        return {column: {"reftable":result[0][0], "refcol":result[0][1], "type" : constype}}
+        return {column: {
+            "reftable":result[0][0],
+            "refcol":result[0][1],"type" : constype}}
 
 ################################################################################
 ################################################################################
@@ -302,7 +299,9 @@ def write_orm_files(db, dbname, login, passwd):
 
         fieldlist = StructureList()
 
-        for result in getcolumns(db, dbname, tablename, 3, 15, 16):
+        columns = getcolumns(db, dbname, tablename, 3, 5, 15, 16, 17)
+        for result in columns:
+            result = columns[result] 
             # 3 = colname, 15 = coltype, 16 = Primary / FK ?
             fieldtype = None
             primary_key = False
@@ -317,20 +316,21 @@ def write_orm_files(db, dbname, login, passwd):
             decimals = ()
             in_keys = False
             constype = 48
-            if result[2] in ["MUL", "PRI"]:
-                fk = getforeignkey(dbname, tablename, result[0], login, passwd)
+            auto_increment = False
+            if result[16] in ["MUL", "PRI"]:
+                fk = getforeignkey(dbname, tablename, result[3], login, passwd)
                 if fk is not None:
                     fieldtype = "foreignkey"
-                    reftable = fk[result[0]]["reftable"]
-                    related_name = fk[result[0]]["refcol"]
-                    constype = fk[result[0]]["type"]
-                if "PRI" in result[2]:
+                    reftable = fk[result[3]]["reftable"]
+                    related_name = fk[result[3]]["refcol"]
+                    constype = fk[result[3]]["type"]
+                if "PRI" in result[16]:
                     if fk is None:
                         fieldtype = "int"
                     primary_key = True
             if fieldtype is None:
                 for key in possibilities:
-                    if key in result[1]:
+                    if key in result[15]:
 
                         in_keys = True
                         fieldtype = key
@@ -338,7 +338,7 @@ def write_orm_files(db, dbname, login, passwd):
                         if "decimal" in key:
                             # Parse the Decimal definition to 
                             # get digits and precison
-                            buff = result[1].split("decimal")[1]
+                            buff = result[15].split("decimal")[1]
                             decimals = ast.literal_eval(buff)
                             max_digits = decimals[0]
                             decimal_places = decimals[1]
@@ -346,27 +346,33 @@ def write_orm_files(db, dbname, login, passwd):
                         if "enum" in key:
                             enum_values = getenumvalues(
                                 tablename, 
-                                result[0], 
-                                db)[result[0]]
+                                result[3], 
+                                db)[result[3]]
 
                         if "char" in key:
-                            max_length = int(result[1].split("char")[1]
+                            max_length = int(result[15].split("char")[1]
                                 .lstrip("(").rstrip(")"))
 
-                        if "UNI" in result[2] :
+                        if "UNI" in result[16] :
                             unique = True
                         break
                 # Uknown data type ? => BareField.
                 if in_keys == False:
                     fieldtype = "Bare"
                     print "Couldn't determine field type of %s.%s."%(
-                        result[0],
-                        result[1]
+                        result[3],
+                        result[15]
                     )
                     print "BareField() selected."
+            auto_increment = True if "auto_increment" in result[3] else False
+            default = None
+            try:
+                default = ast.literal_eval(result[5])
+            except:
+                default = result[5]
             fieldlist.append(
                 possibilities[fieldtype](
-                    name = result[0], 
+                    name = result[3], 
                     primary_key = primary_key, 
                     values = enum_values, 
                     unique = unique, 
@@ -376,9 +382,11 @@ def write_orm_files(db, dbname, login, passwd):
                     max_length = max_length, 
                     reftable = reftable, 
                     related_name = related_name,
+                    auto_increment = auto_increment,
                     constype = constype)
             )
-            fieldlist.set_up_foreign_keys()
+        # Make sure there's NEVER a duplicate in fk's related_name
+        fieldlist.set_up_foreign_keys()
         # Write the file out !
         basetext = """#!/usr/bin/env python2.7
 #-*-encoding: utf-8-*-
@@ -418,8 +426,9 @@ class %s(BaseModel):
 ################################################################################
 ################################################################################
 def write_module_init(dbname):
-    if os.path.isfile(dbname+"/__init__.py"):
-        os.remove(dbname+"/__init__.py")
+    filename = dbname+"/__init__.py"
+    if os.path.isfile(filename):
+        os.remove(filename)
     index = """#!/usr/bin/env python2.7
 #-*-encoding: utf-8-*-
 
@@ -429,12 +438,12 @@ __all__=[
     for item in files:
         if ".pyc" in item:
             continue
-        index += "    '"+item.split(".")[0]+"'"
+        index += "    '%s'"%item.split(".")[0]
         if item not in files[-1]:
             index += ",\n"
 
     index += "\n]\n"
-    f = open(dbname+"/__init__.py", "w+")
+    f = open(filename, "w+")
     f.write(index)
     f.close()
 
@@ -444,7 +453,7 @@ __all__=[
 if __name__ == "__main__":
     import sys
     if "-v" in sys.argv:
-        print "peeweemysqlobjects v. %s."%get_version()
+        print "peeweemysqlobjects version %s."%get_version()
         print "Developped and tested with MySQL 5.6.12."
         exit(0)
 
@@ -461,7 +470,7 @@ if __name__ == "__main__":
     print "INIT DB"
     db = init_db(login, passwd, dbname)
     if db is not None:
-        print "WRITE metadb.py"
+        print "WRITE __metadb__.py"
         write_metadb(login, passwd, dbname)
         print "WRITE ORM FILES"
         write_orm_files(db, dbname, login, passwd)
