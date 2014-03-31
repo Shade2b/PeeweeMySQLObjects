@@ -44,7 +44,7 @@ Used as an executable, it takes three arguments:
 
 Foreign Keys are correctly generated only if both
 tables are in the same database.
-Any FK dependancy module is import'ed in the generated file.
+Any FK dependancy module is import'ed in the generated files.
 """
 
 # IMPORTS #
@@ -60,7 +60,7 @@ try:
 except ImportError:
     print "Error. This module requires peewee."
     print "You can '$ pip install peewee' or get it from"
-    print "http://peewee.readthedocs.org/en/latest/ ."
+    print "    http://peewee.readthedocs.org/en/latest/ ."
     exit(1)
     
 # LOCAL IMPORTS #
@@ -87,6 +87,12 @@ def init_db(login, passwd, dbname):
         return
     db.get_conn().set_character_set('utf8')
     return db
+
+################################################################################
+################################################################################
+################################################################################
+def get_version():
+    return "1.0.0.0"
 
 ################################################################################
 ################################################################################
@@ -208,8 +214,6 @@ def getcolumns(db, dbname, tablename, *args):
     17: the "extra" info (like "auto_increment")
     18: the priviliges
     19: the column comment
-
-    Can serve as a generic function inside another module.
     """
     result = []
     sql = "SELECT * FROM information_schema.columns WHERE table_schema='%s' \
@@ -233,7 +237,7 @@ def getcolumns(db, dbname, tablename, *args):
 ################################################################################
 ################################################################################
 ################################################################################
-def getforeignkey(table, column, login, passwd):
+def getforeignkey(dbname, table, column, login, passwd):
     """
     Retrieves, for a given column, its REFERENCED_TABLE_NAME and
     REFERENCED_COLUMN_NAME
@@ -251,7 +255,16 @@ def getforeignkey(table, column, login, passwd):
     if result == []:
         return None
     else:
-        return {column: {"reftable":result[0][0], "refcol":result[0][1]}}
+        sql = "SELECT `TYPE` FROM `INNODB_SYS_FOREIGN` \
+            WHERE `FOR_NAME` LIKE \"%s/%s\" \
+            AND `REF_NAME` LIKE \"%s/%s\""%(
+                dbname, result[0][1],
+                dbname, table
+            )
+        constype = 48
+        for row in dbbuff.execute_sql(sql):
+            constype = row[0]
+        return {column: {"reftable":result[0][0], "refcol":result[0][1], "type" : constype}}
 
 ################################################################################
 ################################################################################
@@ -312,12 +325,14 @@ def write_orm_files(db, dbname, login, passwd):
             enum_values = None
             decimals = ()
             in_keys = False
+            constype = 48
             if result[2] in ["MUL", "PRI"]:
-                fk = getforeignkey(tablename, result[0], login, passwd)
+                fk = getforeignkey(dbname, tablename, result[0], login, passwd)
                 if fk is not None:
                     fieldtype = "foreignkey"
                     reftable = fk[result[0]]["reftable"]
                     related_name = fk[result[0]]["refcol"]
+                    constype = fk[result[0]]["type"]
                 if "PRI" in result[2]:
                     if fk is None:
                         fieldtype = "int"
@@ -353,8 +368,11 @@ def write_orm_files(db, dbname, login, passwd):
                 # Uknown data type ? => BareField.
                 if in_keys == False:
                     fieldtype = "Bare"
-                    print "Couldn't determine field type of %s.%s. \
-                        BareField() selected."%(result[0],result[1])
+                    print "Couldn't determine field type of %s.%s."%(
+                        result[0],
+                        result[1]
+                    )
+                    print "BareField() selected."
             fieldlist.append(
                 possibilities[fieldtype](
                     name = result[0], 
@@ -366,7 +384,8 @@ def write_orm_files(db, dbname, login, passwd):
                     decimal_places = decimal_places, 
                     max_length = max_length, 
                     reftable = reftable, 
-                    related_name = related_name)
+                    related_name = related_name,
+                    constype = constype)
             )
             fieldlist.set_up_foreign_keys()
         # Write the file out !
@@ -433,8 +452,13 @@ __all__=[
 ################################################################################
 if __name__ == "__main__":
     import sys
+    if "-v" in sys.argv:
+        print "peeweemysqlobjects v. %s."%get_version()
+        print "Developped and tested with MySQL 5.6.12."
+        exit(0)
 
     print "MAIN"
+
     if len(sys.argv) < 4:
         print "Usage : peeweemysqlobjects.py login password dbname"
         exit(1)
@@ -451,4 +475,4 @@ if __name__ == "__main__":
     write_orm_files(db, dbname, login, passwd)
     print "WRITE MODULE __init__.py FILE"
     write_module_init(dbname)
-    print "DONE"
+    print "\nAND IT'S DONE ! Enjoy your MySQL db in Python !"

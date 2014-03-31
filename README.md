@@ -16,17 +16,19 @@ $ peeweemysqlobject userlogin passwd databaseName
 
 RESTRICTION
 Logged user must be able to read from the information_schema database.
+Logged user must have the PROCESS privilege to query the INNODB_SYS_FOREIGN table, if applicable.
 
 TODO
 * SOLVE THE FOREIGN KEY "_id" ISSUE (created by https://github.com/coleifer/peewee/blob/master/peewee.py line 895) [SEEMS TO WORK]
-* on_update and on_delete actions for foreign keys
 * and some more...
 
 WHAT'S DONE
 * better naming system for "related_name"s
-    * related_names will now have an underscore followed by a number appended starting with the second occurence of a foreign key on the same foreign table.
+    * related_names will now have an underscore followed by a number appended starting with the second occurence of a foreign key on the same foreign table (eg. "fk_reftable_refcol_num").
+    * bug : if two tables have a foreign key on the same table, then a related_name collision happens. This has been fixed using the same system of _num.
 * clean-up of global variables (dbname, login, passwd). They can't be used when importing parts of the module like "from peeweemysqlobjects import get_tables"
-    * Clean-up done, no more globals.
+    * Clean-up done, no more glaring global.
+* on_update and on_delete actions for foreign keys
 
 KNOWN ISSUES & TROUBLESHOOTING
 * More related to peewee. Any Foreign key will have a "_id" appended. It can create situations like this one : your table has a Foreign key column named tablename_Id, 
