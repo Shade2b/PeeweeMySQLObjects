@@ -92,7 +92,7 @@ def init_db(login, passwd, dbname):
 ################################################################################
 ################################################################################
 def get_version():
-    return "0.1.0.4"
+    return "0.1.1.1"
 
 ################################################################################
 ################################################################################
@@ -223,36 +223,49 @@ def getcolumns(db, dbname, tablename, *args):
 ################################################################################
 ################################################################################
 ################################################################################
-def getforeignkey(dbname, table, column, login, passwd):
+def getforeignkey(db, dbname, table, column):
     """
     Retrieves, for a given column, its REFERENCED_TABLE_NAME and
     REFERENCED_COLUMN_NAME
     under a dictionary form. 
     """
-    dbbuff = init_db(login, passwd, "information_schema")
     sql = "SELECT `REFERENCED_TABLE_NAME`,`REFERENCED_COLUMN_NAME` \
-            FROM KEY_COLUMN_USAGE \
+            FROM information_schema.KEY_COLUMN_USAGE \
             WHERE `TABLE_NAME`='%s' \
             AND `TABLE_SCHEMA`='%s' \
             AND `COLUMN_NAME`='%s' \
             AND `REFERENCED_COLUMN_NAME` IS NOT NULL"%(table, dbname, column)
-    result = dbbuff.execute_sql(sql)
+    result = db.execute_sql(sql)
     result = [list(row) for row in result]
     if result == []:
         return None
     else:
-        sql = "SELECT `TYPE` FROM `INNODB_SYS_FOREIGN` \
+        sql = "SELECT `TYPE` FROM information_schema.`INNODB_SYS_FOREIGN` \
             WHERE `FOR_NAME` LIKE \"%s/%s\" \
             AND `REF_NAME` LIKE \"%s/%s\""%(
                 dbname, table,
                 dbname, result[0][0]
             )
         constype = None
-        for row in dbbuff.execute_sql(sql):
+        for row in db.execute_sql(sql):
             constype = row[0]
         return {column: {
             "reftable":result[0][0],
-            "refcol":result[0][1],"type" : constype}}
+            "refcol":result[0][1],
+            "type" : constype}}
+
+################################################################################
+################################################################################
+################################################################################
+def getindexes(db, dbname, tablename, columnname):
+    sql = "SHOW INDEX FROM %s FROM %s WHERE Column_name='%s'"%(tablename, dbname, columnname)
+    result = {}
+    for row in db.execute_sql(sql):
+        if "PRIMARY" not in row[2]:
+            result.update({row[2]:row[1]})
+    if result == {}:
+        return None
+    return result
 
 ################################################################################
 ################################################################################
@@ -303,6 +316,7 @@ def write_orm_files(db, dbname, login, passwd):
         for result in columns:
             result = columns[result] 
             # 3 = colname, 15 = coltype, 16 = Primary / FK ?
+            indexes = None
             fieldtype = None
             primary_key = False
             unique = False
@@ -317,8 +331,10 @@ def write_orm_files(db, dbname, login, passwd):
             in_keys = False
             constype = 48
             auto_increment = False
+            index = {}
             if result[16] in ["MUL", "PRI"]:
-                fk = getforeignkey(dbname, tablename, result[3], login, passwd)
+                fk = getforeignkey(db, dbname, tablename, result[3])
+                indexes = getindexes(db, dbname, tablename, result[3])
                 if fk is not None:
                     fieldtype = "foreignkey"
                     reftable = fk[result[3]]["reftable"]
@@ -373,9 +389,9 @@ def write_orm_files(db, dbname, login, passwd):
             fieldlist.append(
                 possibilities[fieldtype](
                     name = result[3], 
-                    primary_key = primary_key, 
+                    primary_key = primary_key,
+                    indexes = indexes,
                     values = enum_values, 
-                    unique = unique, 
                     default = default, 
                     max_digits = max_digits, 
                     decimal_places = decimal_places, 
@@ -385,8 +401,8 @@ def write_orm_files(db, dbname, login, passwd):
                     auto_increment = auto_increment,
                     constype = constype)
             )
-        # Make sure there's NEVER a duplicate in fk's related_name
-        fieldlist.set_up_foreign_keys()
+        # Set up foreign keys and indexes
+        fieldlist.set_up()
         # Write the file out !
         basetext = """#!/usr/bin/env python2.7
 #-*-encoding: utf-8-*-
@@ -413,13 +429,28 @@ class %s(BaseModel):
         
         if len(fieldlist.get_primary_keys()) > 1:
             openedfile.write("    class Meta:\n")
-            openedfile.write("        primary_key=CompositeKey(")
+            openedfile.write("        primary_key = CompositeKey(")
             keys = fieldlist.get_primary_keys()
             for index in xrange(len(keys)):
                 openedfile.write("'"+keys[index].name+"'")
                 if index != len(keys) - 1:
                     openedfile.write(", ")
             openedfile.write(")\n")
+        indexes = fieldlist.get_indexes()
+        if len(indexes) > 0:
+            if len(fieldlist.get_primary_keys()) == 1:
+                openedfile.write("    class Meta:\n")
+            openedfile.write("        indexes = (\n")
+            for index in indexes:
+                openedfile.write("            ((")
+                unique = None
+                for field in indexes[index]:
+                    openedfile.write("'%s'"%field[0])
+                    unique = field[1]
+                    if field != indexes[index][-1]:
+                        openedfile.write(", ")
+                openedfile.write("), %s) # %s\n"%("True" if unique == True else "False", index))
+            openedfile.write("        )\n")
         openedfile.close()
 
 ################################################################################

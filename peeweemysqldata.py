@@ -42,13 +42,13 @@ class BaseFieldStructure():
     def __init__(self, *args, **kwargs):
         self.coma_needed = False
         try:
+            self.indexes = kwargs["indexes"]
+        except:
+            self.indexes = None
+        try:
             self.primary_key = kwargs["primary_key"]
         except:
             self.primary_key = False
-        try:
-            self.unique = kwargs["unique"]
-        except:
-            self.unique = False
         try:
             self.default = kwargs["default"]
         except:
@@ -58,12 +58,19 @@ class BaseFieldStructure():
         except:
             print "Error : a field must have a name !"
             exit(1)
+        self.index = None
+        self.unique = None
     def __str__(self):
         result = ""
         if self.primary_key == True:
             if self.coma_needed == True:
                 result += ", "
             result += "primary_key = True"
+            self.coma_needed = True
+        if self.index == True:
+            if self.coma_needed == True:
+                result += ", "
+            result += "index = True"
             self.coma_needed = True
         if self.unique == True:
             if self.coma_needed == True:
@@ -249,6 +256,8 @@ class ForeignKeyStructure(BaseFieldStructure):
             "_" + self.related_name
         BaseFieldStructure.__init__(self, *args, **kwargs)
     def __str__(self):
+        self.index = False
+        self.unique = False
         result = self.name + " = ForeignKeyField("
         if self.reftable is not None:
             result += self.reftable
@@ -257,9 +266,12 @@ class ForeignKeyStructure(BaseFieldStructure):
             self.coma_needed = True
             result += ", db_column = \"" + self.name + "\""
             if self.constraints is not None:
-                for key in self.types:
-                    if (key & self.constraints) == key:
-                        result += ", "+self.types[key]
+                if self.constraints == 0:
+                    result += ", on_delete = \"RESTRICT\", on_update = \"RESTRICT\""
+                else:
+                    for key in self.types:
+                        if (key & self.constraints) == key:
+                            result += ", "+self.types[key]
         result += BaseFieldStructure.__str__(self) + ")"
         return result
 
@@ -268,6 +280,7 @@ class ForeignKeyStructure(BaseFieldStructure):
 ################################################################################
 class StructureList(list):
     foreign_keys = {}
+    indexes = {}
 
     def __init__(self, *args, **kwargs):
         self.primary_keys = []
@@ -276,15 +289,24 @@ class StructureList(list):
     def append(self, *args, **kwargs):
         for instance in args:
             if not hasattr(instance, "__str__"):
-                raise ValueError("Unable to append element "+ str(instance))
+                raise ValueError("Unable to append element "+ instance)
             if hasattr(instance, "primary_key") and \
                 instance.primary_key == True:
                 self.primary_keys.append(instance)
+            if hasattr(instance, "indexes"):
+                self.add_indexes(instance.name, instance.indexes)
         list.append(self, *args, **kwargs)
 
     def __getitem__(self, index):
         return list.__getitem__(self, index),  \
             list.__getitem__(self, index).__str__()
+
+    def add_indexes(self, colname, indexes):
+        if indexes is not None:
+            for index in indexes:
+                if index not in self.indexes:
+                    self.indexes.update({index:[]})
+                self.indexes[index].append([colname, indexes[index]])
 
     def get_primary_keys(self):
         return [i for i in self if i.primary_key == True]
@@ -293,7 +315,14 @@ class StructureList(list):
         return [i for i in self 
             if i.__class__.__name__ == "ForeignKeyStructure"]
 
-    def set_up_foreign_keys(self):
+    def get_indexes(self):
+        return self.indexes
+
+    def set_up(self):
+        """
+        Sets up anything needed related to index keys, unique index keys
+        and foreign keys.
+        """
         for fkey in self.get_foreign_keys():
             if fkey.related_name not in self.foreign_keys:
                 self.foreign_keys.update({fkey.related_name:0})
@@ -301,6 +330,14 @@ class StructureList(list):
                 self.foreign_keys.update(
                     {fkey.related_name : self.foreign_keys[fkey.related_name]+1}
                 )
-
                 fkey.related_name = fkey.related_name + "_" + \
                     str(self.foreign_keys[fkey.related_name])
+        for index in self.indexes:
+            if len(self.indexes[index]) == 1:
+                for column in self:
+                    if column.name == self.indexes[index][0][0]:
+                        column.index = True
+                        column.unique = (self.indexes[index][0][1] == 1)
+        buff = [index for index in self.indexes if len(self.indexes[index]) == 1]
+        for index in buff:
+            self.indexes.pop(index)

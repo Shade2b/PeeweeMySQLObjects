@@ -19,10 +19,11 @@ RESTRICTION
 * Logged user must have the PROCESS privilege to query the INNODB_SYS_FOREIGN table, if applicable.
 
 TODO
-* SOLVE THE FOREIGN KEY "_id" ISSUE (created by https://github.com/coleifer/peewee/blob/master/peewee.py line 895) [SEEMS WORKING]
-* and some more...
+* Send your ideas at broutta.mickael(at)gmail.com !
 
 WHAT'S DONE
+* The FOREIGN KEY "_id" issue has been fixes. [v 0.1.0.5]
+* Support for indexes (non-uniques and uniques, for all columns, even if they are part of multiple indexes) [v. 0.1.1.1]
 * better naming system for "related_name"s
     * related_names will now have an underscore followed by a number appended starting with the second occurence of a foreign key on the same foreign table (eg. "fk_reftable_refcol_num").
 * clean-up of global variables (dbname, login, passwd). They can't be used when importing parts of the module like "from peeweemysqlobjects import get_tables"
