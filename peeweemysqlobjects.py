@@ -258,10 +258,14 @@ def getforeignkey(db, dbname, table, column):
 ################################################################################
 ################################################################################
 def getindexes(db, dbname, tablename, columnname):
-    sql = "SHOW INDEX FROM %s FROM %s WHERE Column_name='%s'"%(tablename, dbname, columnname)
+    sql = "SHOW INDEX FROM %s FROM %s WHERE Column_name='%s'"%(
+        tablename,
+        dbname,
+        columnname
+    )
     result = {}
     for row in db.execute_sql(sql):
-        if "PRIMARY" not in row[2]:
+        if "PRIMARY" not in row[2]: # Can't have primaries show up in indexes...
             result.update({row[2]:row[1]})
     if result == {}:
         return None

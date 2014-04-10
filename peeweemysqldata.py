@@ -38,7 +38,11 @@ to a folder with all its tables as
 Python objects, using peewee.
 """
 
-class BaseFieldStructure():
+from abc import ABCMeta
+
+class BaseFieldStructure(object):
+    __metaclass__ = ABCMeta
+
     def __init__(self, *args, **kwargs):
         self.coma_needed = False
         try:
@@ -77,7 +81,7 @@ class BaseFieldStructure():
                 result += ", "
             result += "unique = True"
             self.coma_needed = True
-        if self.default is not None:
+        if self.default is not None and self.default != "":
             if self.coma_needed == True:
                 result += ", "
             result += "default = " + str(self.default)
@@ -122,7 +126,7 @@ class CharStructure(BaseFieldStructure):
         BaseFieldStructure.__init__(self, *args, **kwargs)
     def __str__(self):
         result = self.name + " = CharField(max_length = %s"%self.max_length
-        if self.primary_key == True or self.unique == True or self.default is not None:
+        if self.primary_key == True or self.unique == True:
             result += ", "
         result += BaseFieldStructure.__str__(self)
         result += ")"
@@ -332,12 +336,15 @@ class StructureList(list):
                 )
                 fkey.related_name = fkey.related_name + "_" + \
                     str(self.foreign_keys[fkey.related_name])
+        buff = []
         for index in self.indexes:
-            if len(self.indexes[index]) == 1:
+            if len(self.indexes[index]) == 1: 
+                # Index is on a single column. 
+                # If it is, it's not needed to write it in Meta.indexes .
+                buff.append(index)
                 for column in self:
                     if column.name == self.indexes[index][0][0]:
                         column.index = True
                         column.unique = (self.indexes[index][0][1] == 1)
-        buff = [index for index in self.indexes if len(self.indexes[index]) == 1]
         for index in buff:
             self.indexes.pop(index)

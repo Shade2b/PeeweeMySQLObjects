@@ -19,6 +19,7 @@ RESTRICTION
 * Logged user must have the PROCESS privilege to query the INNODB_SYS_FOREIGN table, if applicable.
 
 TODO
+* Add support for remote databases. For now, only local databases are supported.
 * Send your ideas at broutta.mickael(at)gmail.com !
 
 WHAT'S DONE
