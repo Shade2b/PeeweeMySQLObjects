@@ -20,6 +20,7 @@ RESTRICTION
 
 TODO
 * Add support for remote databases. For now, only local databases are supported.
+* Reorder column definitions in generated files. They are stored and sorted in a dict, so they come out in another order than what's given by the ordinal_position.
 * Send your ideas at broutta.mickael(at)gmail.com !
 
 WHAT'S DONE

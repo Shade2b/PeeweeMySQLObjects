@@ -30,7 +30,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 
-peewee licence : Copyright (c) 2010 Charles Leifer 
+peewee Copyright (c) 2010 Charles Leifer 
 (https://github.com/coleifer/peewee/blob/master/LICENSE)
 
 This module helps convert a database 
@@ -66,26 +66,23 @@ class BaseFieldStructure(object):
         self.unique = None
     def __str__(self):
         result = ""
-        if self.primary_key == True:
+        result += self.add_parameter(self.primary_key == True,
+            "primary_key = True")
+        result += self.add_parameter(self.index == True, "index = True")
+        result += self.add_parameter(self.unique == True, "unique = True")
+        result += self.add_parameter(self.default != None 
+            and self.default != "", "default = " + str(self.default))
+        # If we want to print the same line again 
+        # somewhere in the code, we must reset !
+        self.coma_needed = False 
+        return result
+    def add_parameter(self, parameter, value):
+        result = ""
+        if parameter == True:
             if self.coma_needed == True:
                 result += ", "
-            result += "primary_key = True"
             self.coma_needed = True
-        if self.index == True:
-            if self.coma_needed == True:
-                result += ", "
-            result += "index = True"
-            self.coma_needed = True
-        if self.unique == True:
-            if self.coma_needed == True:
-                result += ", "
-            result += "unique = True"
-            self.coma_needed = True
-        if self.default is not None and self.default != "":
-            if self.coma_needed == True:
-                result += ", "
-            result += "default = " + str(self.default)
-            self.coma_needed = True
+            result += value
         return result
 
 ################################################################################
@@ -284,10 +281,10 @@ class ForeignKeyStructure(BaseFieldStructure):
 ################################################################################
 class StructureList(list):
     foreign_keys = {}
-    indexes = {}
-
+    
     def __init__(self, *args, **kwargs):
         self.primary_keys = []
+        self.indexes = {}
         list.__init__(self, *args, **kwargs)
 
     def append(self, *args, **kwargs):
