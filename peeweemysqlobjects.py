@@ -48,6 +48,7 @@ Any FK dependancy module is import'ed in the generated files.
 """
 
 # IMPORTS #
+# import argparse # imported in if __name__ == "__main__"
 import ast
 import os
 import shutil
@@ -74,13 +75,16 @@ except ImportError, i:
 ################################################################################
 ################################################################################
 ################################################################################
-def init_db(login, passwd, dbname):
+def init_db(login, passwd, dbname, addr, port):
     """
     Prepares a connection to your MySQL database.
     """
     db = None
     try:
-        db = peewee.MySQLDatabase(dbname, user=login, passwd=passwd)
+        if addr is None:
+            db = peewee.MySQLDatabase(dbname, user=login, passwd=passwd)
+        else:
+            db = peewee.MySQLDatabase(dbname, user=login, passwd=passwd, host=addr, port=port)
     except Exception, e:
         print e
         db = None
@@ -97,7 +101,7 @@ def get_version():
 ################################################################################
 ################################################################################
 ################################################################################
-def write_metadb(login, passwd, dbname):
+def write_metadb(login, passwd, dbname, addr, port):
     """
     Creates a file called __metadb__.py, which contains 
     any database connection related information.
@@ -118,7 +122,14 @@ from peewee import *
 dbname = '%s'
 login = '%s'
 passwd = '%s'
+"""%(dbname, login, passwd)
 
+    if addr is not None:
+        metadb += """addr = '%s'
+port = %d
+"""%(addr,port)
+
+    metadb += """
 class EnumField(Field):
     '''
     Enables the enum type for peewee.MySQLDatabase to manage.
@@ -144,15 +155,18 @@ class EnumField(Field):
 
 setattr(peewee, "EnumField", EnumField)
 MySQLDatabase.register_fields({'enum': 'ENUM'})
+db = MySQLDatabase(dbname, user=login, passwd=passwd"""
 
-db = MySQLDatabase(dbname, user=login, passwd=passwd)
+    if addr is not None:
+        metadb += """, host=addr, port=port"""
+    metadb += """)
 db.get_conn().set_character_set('utf8')
 
 class BaseModel(Model):
     class Meta:
         database = db
 
-"""%(dbname, login, passwd)
+"""
 
     
     if os.path.isdir(dbname):
@@ -488,27 +502,42 @@ __all__=[
 ################################################################################
 ################################################################################
 if __name__ == "__main__":
+    import argparse
+    import socket
     import sys
-    if "-v" in sys.argv:
+
+    argparser = argparse.ArgumentParser(description="Utility tool to \
+        transform a MySQL database into peewee orm files.")
+    argparser.add_argument('-v', action='store_true', help="prints version")
+    argparser.add_argument('-u', '--user', dest='login', nargs=1, help="login")
+    argparser.add_argument('-p', '--passwd', nargs=1, help="password")
+    argparser.add_argument('-a', '--addr', help="ip address of remote server (default localhost)")
+    argparser.add_argument('--port', help="port of remote server (default 3306)")
+    argparser.add_argument('databasename')
+
+    args = argparser.parse_args()
+
+    if args.v == True:
         print "peeweemysqlobjects version %s."%get_version()
         print "Developped and tested with MySQL 5.6.12."
         exit(0)
 
     print "MAIN"
-
-    if len(sys.argv) < 4:
-        print "Usage : peeweemysqlobjects.py login password dbname"
-        exit(1)
-
-    dbname = sys.argv[3]
-    login = sys.argv[1]
-    passwd = sys.argv[2]
+    
+    dbname = args.databasename
+    login = args.login[0]
+    passwd = args.passwd[0]
+    addr = args.addr
+    if args.port is None:
+        port = 3306
+    else:
+        port = int(args.port)
     
     print "INIT DB"
-    db = init_db(login, passwd, dbname)
+    db = init_db(login, passwd, dbname, addr, port)
     if db is not None:
         print "WRITE __metadb__.py"
-        write_metadb(login, passwd, dbname)
+        write_metadb(login, passwd, dbname, addr, port)
         print "WRITE ORM FILES"
         write_orm_files(db, dbname, login, passwd)
         print "WRITE MODULE __init__.py FILE"

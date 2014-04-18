@@ -12,14 +12,31 @@ COMPATIBILITY
 * Compatible with Windows, Linux and Mac. 
 
 USAGE
-* $ peeweemysqlobject userlogin passwd databaseName
+
+peeweemysqlobjects.py [-h] [-v] [-u LOGIN] [-p PASSWD] [-a ADDR]
+                             [--port PORT]
+                             databasename
+
+Utility tool to transform a MySQL database into peewee orm files.
+
+positional arguments:
+  databasename
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -v                    prints version
+  -u LOGIN, --user LOGIN
+                        login
+  -p PASSWD, --passwd PASSWD
+                        password
+  -a ADDR, --addr ADDR  ip address of remote server (default localhost)
+  --port PORT           port of remote server (default 3306)
 
 RESTRICTION
 * Logged user must be able to read from the information_schema database.
-* Logged user must have the PROCESS privilege to query the INNODB_SYS_FOREIGN table, if applicable.
+* Logged user must have the PROCESS privilege to query the INNODB_SYS_FOREIGN table, if applicable (ie if there are foreign key constraints.)
 
 TODO
-* Add support for remote databases. For now, only local databases are supported.
 * Send your ideas at broutta.mickael(at)gmail.com !
 
 WHAT'S DONE
@@ -31,6 +48,8 @@ WHAT'S DONE
     * Clean-up done, no more glaring global.
 * on_update and on_delete actions for foreign keys
 * Reorder column definitions in generated files. They are stored and sorted in a dict, so they come out in another order than what's given by the ordinal_position.
+* Added support for remote databases.
+* Added better argument handling.
 
 KNOWN ISSUES & TROUBLESHOOTING
 * None at the moment.
