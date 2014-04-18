@@ -20,7 +20,6 @@ RESTRICTION
 
 TODO
 * Add support for remote databases. For now, only local databases are supported.
-* Reorder column definitions in generated files. They are stored and sorted in a dict, so they come out in another order than what's given by the ordinal_position.
 * Send your ideas at broutta.mickael(at)gmail.com !
 
 WHAT'S DONE
@@ -31,9 +30,7 @@ WHAT'S DONE
 * clean-up of global variables (dbname, login, passwd). They can't be used when importing parts of the module like "from peeweemysqlobjects import get_tables"
     * Clean-up done, no more glaring global.
 * on_update and on_delete actions for foreign keys
+* Reorder column definitions in generated files. They are stored and sorted in a dict, so they come out in another order than what's given by the ordinal_position.
 
 KNOWN ISSUES & TROUBLESHOOTING
-* More related to peewee. Any Foreign key will have a "_id" appended. It can create situations like this one : your table has a Foreign key column named tablename_Id, 
-    and peewee appends "_id". MySQL will report that "tablename_Id_id" doesn't exist, which is true. I need to either think about a workaround, or ask Coleifer why he
-    made peewee append "_id". There must be a reason.
-    SOLUTION : A fix is being worked on and needs testing.
+* None at the moment.

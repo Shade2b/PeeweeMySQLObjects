@@ -43,7 +43,7 @@ Used as an executable, it takes three arguments:
     local mysql database name
 
 Foreign Keys are correctly generated only if both
-tables are in the same database.
+related tables are in the same database.
 Any FK dependancy module is import'ed in the generated files.
 """
 
@@ -92,7 +92,7 @@ def init_db(login, passwd, dbname):
 ################################################################################
 ################################################################################
 def get_version():
-    return "0.1.1.1"
+    return "0.1.1.2"
 
 ################################################################################
 ################################################################################
@@ -201,7 +201,7 @@ def getcolumns(db, dbname, tablename, *args):
     18: the priviliges
     19: the column comment
     """
-    result = {}
+    result = []
     sql = "SELECT * FROM information_schema.columns WHERE table_schema='%s' \
             AND table_name = '%s' ORDER BY table_name, ordinal_position"
     for field in db.execute_sql(sql%(dbname,tablename)):
@@ -210,14 +210,17 @@ def getcolumns(db, dbname, tablename, *args):
             try:
                 buff.update({arg:str(field[arg])})
             except Exception, e:
-                print "Error occured after %s.%s"%(
-                    tablename,
-                    str(result[-1][0])
-                )
+                if len(result) == 0:
+                    print "Error occured on the first column."
+                else:
+                    print "Error occured after %s.%s"%(
+                        tablename,
+                        str(result[-1][3])
+                    )
                 print e
                 print "\nResuming..."
                 buff.update({arg:"None"})
-        result.update({field[3]:buff})
+        result.append(buff)
     return result
 
 ################################################################################
@@ -318,7 +321,6 @@ def write_orm_files(db, dbname, login, passwd):
 
         columns = getcolumns(db, dbname, tablename, 3, 5, 15, 16, 17)
         for result in columns:
-            result = columns[result] 
             # 3 = colname, 15 = coltype, 16 = Primary / FK ?
             indexes = None
             fieldtype = None
