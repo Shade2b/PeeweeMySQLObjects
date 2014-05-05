@@ -507,7 +507,7 @@ if __name__ == "__main__":
     import sys
 
     argparser = argparse.ArgumentParser(description="Utility tool to \
-        transform a MySQL database into peewee orm files.")
+        convert a MySQL database into peewee orm files.")
     argparser.add_argument('-v', action='store_true', help="prints version")
     argparser.add_argument('-u', '--user', dest='login', nargs=1, help="login")
     argparser.add_argument('-p', '--passwd', nargs=1, help="password")

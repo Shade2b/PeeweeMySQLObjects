@@ -1,10 +1,10 @@
 PeeweeMySQLObjects
 ==================
 
-A (soon-to-be) full-featured MySQL database introspection tool to reverse-engineer MySQL databases into Python objects.
-Uses Peewee from Coleifer (get it from https://github.com/coleifer/peewee or http://peewee.readthedocs.org/en/latest/)
+A (soon-to-be) full-featured MySQL database introspection tool to reverse-engineer (convert) MySQL databases into Python objects.
+It uses Peewee from Coleifer (get it from https://github.com/coleifer/peewee or http://peewee.readthedocs.org/en/latest/)
 
-Even though Pwiz exists, I coded this before knowing about it. I proceeded to add support for ENUM, foreign keys and unique indexes.
+Even though Pwiz exists, I coded this converter before knowing about it. I proceeded to add support for ENUM, foreign keys and unique indexes.
 
 COMPATIBILITY
 * Not compatible with PostgreSQL or SQLite ! MySQL only.
@@ -17,7 +17,7 @@ peeweemysqlobjects.py [-h] [-v] [-u LOGIN] [-p PASSWD] [-a ADDR]
                              [--port PORT]
                              databasename
 
-Utility tool to transform a MySQL database into peewee orm files.
+Utility tool to convert a MySQL database into peewee orm files.
 
 positional arguments:
   databasename
