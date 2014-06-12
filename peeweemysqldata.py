@@ -44,7 +44,7 @@ class BaseFieldStructure(object):
     __metaclass__ = ABCMeta
 
     def __init__(self, *args, **kwargs):
-        self.coma_needed = False
+        self.comma_needed = False
         try:
             self.indexes = kwargs["indexes"]
         except:
@@ -69,19 +69,19 @@ class BaseFieldStructure(object):
         result += self.add_parameter(self.primary_key == True,
             "primary_key = True")
         result += self.add_parameter(self.index == True, "index = True")
-        result += self.add_parameter(self.unique == True, "unique = True")
+        result += self.add_parameter(self.index == True and self.unique == False, "unique = True")
         result += self.add_parameter(self.default != None 
             and self.default != "", "default = " + str(self.default))
         # If we want to print the same line again 
         # somewhere in the code, we must reset !
-        self.coma_needed = False 
+        self.comma_needed = False 
         return result
     def add_parameter(self, parameter, value):
         result = ""
         if parameter == True:
-            if self.coma_needed == True:
+            if self.comma_needed == True:
                 result += ", "
-            self.coma_needed = True
+            self.comma_needed = True
             result += value
         return result
 
@@ -122,9 +122,8 @@ class CharStructure(BaseFieldStructure):
         self.max_length = max_length
         BaseFieldStructure.__init__(self, *args, **kwargs)
     def __str__(self):
-        result = self.name + " = CharField(max_length = %s"%self.max_length
-        if self.primary_key == True or self.unique == True:
-            result += ", "
+        result = self.name + " = CharField("
+        result += self.add_parameter(True, "max_length = %s"%self.max_length)
         result += BaseFieldStructure.__str__(self)
         result += ")"
         return result
@@ -149,9 +148,8 @@ class DecimalStructure(BaseFieldStructure):
         BaseFieldStructure.__init__(self, *args, **kwargs)
     def __str__(self):
         result = self.name + " = DecimalField("
-        result += "max_digits = "+ str(self.max_digits) + ", "
-        result += "decimal_places = " + str(self.decimal_places) 
-        self.coma_needed = True
+        result += self.add_parameter(True, "max_digits = "+ str(self.max_digits))
+        result += self.add_parameter(True, "decimal_places = " + str(self.decimal_places))
         result += BaseFieldStructure.__str__(self) + ")"
         return result
 
@@ -171,9 +169,7 @@ class EnumStructure(BaseFieldStructure):
         BaseFieldStructure.__init__(self, *args, **kwargs)
     def __str__(self):
         result = self.name + " = EnumField("
-        if self.values is not None :
-            result += "values = " + str(self.values)
-            self.coma_needed = True
+        result += self.add_parameter(self.values is not None, "values = " + str(self.values))
         result += BaseFieldStructure.__str__(self) + ")"
         return result
 
@@ -194,8 +190,7 @@ class IntegerStructure(BaseFieldStructure):
         BaseFieldStructure.__init__(self, *args, **kwargs)
     def __str__(self):
         result = self.name + " = IntegerField("
-        if self.auto_increment == True:
-            result += "auto_increment = True, "
+        result += self.add_parameter(self.auto_increment == True, "auto_increment = True")
         result += BaseFieldStructure.__str__(self) + ")"
         return result
 
@@ -261,18 +256,18 @@ class ForeignKeyStructure(BaseFieldStructure):
         self.unique = False
         result = self.name + " = ForeignKeyField("
         if self.reftable is not None:
-            result += self.reftable
-            if self.related_name is not None:
-                result += ", related_name = '" + self.related_name + "'"
-            self.coma_needed = True
-            result += ", db_column = \"" + self.name + "\""
-            if self.constraints is not None:
-                if self.constraints == 0:
-                    result += ", on_delete = \"RESTRICT\", on_update = \"RESTRICT\""
-                else:
-                    for key in self.types:
-                        if (key & self.constraints) == key:
-                            result += ", "+self.types[key]
+            result += self.add_parameter(True, self.reftable)
+            result += self.add_parameter(self.related_name is not None,
+                "related_name = '" + self.related_name + "'")
+            result += self.add_parameter(True, "db_column = \"" \
+                + self.name + "\"")
+            result += self.add_parameter(self.constraints is not None \
+                and self.constraints == 0, 
+                "on_delete = \"RESTRICT\", on_update = \"RESTRICT\"")
+            if self.constraints is not None and self.constraints != 0:
+                for key in self.types:
+                    if (key & self.constraints) == key:
+                        result += self.add_parameter(True, self.types[key])
         result += BaseFieldStructure.__str__(self) + ")"
         return result
 
@@ -334,10 +329,13 @@ class StructureList(list):
                 fkey.related_name = fkey.related_name + "_" + \
                     str(self.foreign_keys[fkey.related_name])
         buff = []
+        for column in self:
+            if column.name == "X" or column.name == "Y":
+                print self.indexes
         for index in self.indexes:
             if len(self.indexes[index]) == 1: 
                 # Index is on a single column. 
-                # If it is, it's not needed to write it in Meta.indexes .
+                # If it is, it's not needed to write it in Meta.indexes.
                 buff.append(index)
                 for column in self:
                     if column.name == self.indexes[index][0][0]:

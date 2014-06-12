@@ -352,9 +352,9 @@ def write_orm_files(db, dbname, login, passwd):
             constype = 48
             auto_increment = False
             index = {}
+            indexes = getindexes(db, dbname, tablename, result[3])
             if result[16] in ["MUL", "PRI"]:
                 fk = getforeignkey(db, dbname, tablename, result[3])
-                indexes = getindexes(db, dbname, tablename, result[3])
                 if fk is not None:
                     fieldtype = "foreignkey"
                     reftable = fk[result[3]]["reftable"]
@@ -469,7 +469,7 @@ class %s(BaseModel):
                     unique = field[1]
                     if field != indexes[index][-1]:
                         openedfile.write(", ")
-                openedfile.write("), %s) # %s\n"%("True" if unique == True else "False", index))
+                openedfile.write("), %s) # %s\n"%("False" if unique == True else "True", index))
             openedfile.write("        )\n")
         openedfile.close()
 
