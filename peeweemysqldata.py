@@ -266,8 +266,7 @@ class ForeignKeyStructure(BaseFieldStructure):
                 "on_delete = \"RESTRICT\", on_update = \"RESTRICT\"")
             if self.constraints is not None and self.constraints != 0:
                 for key in self.types:
-                    if (key & self.constraints) == key:
-                        result += self.add_parameter(True, self.types[key])
+                    result += self.add_parameter((key & self.constraints) == key, self.types[key])
         result += BaseFieldStructure.__str__(self) + ")"
         return result
 
