@@ -328,9 +328,6 @@ class StructureList(list):
                 fkey.related_name = fkey.related_name + "_" + \
                     str(self.foreign_keys[fkey.related_name])
         buff = []
-        for column in self:
-            if column.name == "X" or column.name == "Y":
-                print self.indexes
         for index in self.indexes:
             if len(self.indexes[index]) == 1: 
                 # Index is on a single column. 
