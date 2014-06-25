@@ -503,7 +503,6 @@ __all__=[
 ################################################################################
 if __name__ == "__main__":
     import argparse
-    import socket
     import sys
 
     argparser = argparse.ArgumentParser(description="Utility tool to \
