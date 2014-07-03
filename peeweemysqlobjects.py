@@ -400,7 +400,7 @@ def write_orm_files(db, dbname, login, passwd):
                         result[15]
                     )
                     print "BareField() selected."
-            auto_increment = True if "auto_increment" in result[3] else False
+            auto_increment = True if "auto_increment" in result[17] else False
             default = None
             try:
                 default = ast.literal_eval(result[5])
