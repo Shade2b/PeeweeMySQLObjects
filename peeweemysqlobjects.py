@@ -37,11 +37,6 @@ This module helps convert a database
 to a folder with all its tables as 
 Python objects, using peewee.
 
-Used as an executable, it takes three arguments:
-    username
-    password
-    local mysql database name
-
 Foreign Keys are correctly generated only if both
 related tables are in the same database.
 Any FK dependancy module is import'ed in the generated files.
@@ -68,7 +63,7 @@ except ImportError:
 try:
     from peeweemysqldata import *
 except ImportError, i:
-    print "Error importing data structures : %s"%str(i)
+    print "Error importing data structures (peeweemysqldata) : %s"%str(i)
     exit(1)
 
 # FUNCTIONS #
@@ -96,7 +91,7 @@ def init_db(login, passwd, dbname, addr, port):
 ################################################################################
 ################################################################################
 def get_version():
-    return "0.1.1.2"
+    return "0.1.1.3"
 
 ################################################################################
 ################################################################################
@@ -351,7 +346,7 @@ def write_orm_files(db, dbname, login, passwd):
             in_keys = False
             constype = 48
             auto_increment = False
-            index = {}
+            #index = {}
             indexes = getindexes(db, dbname, tablename, result[3])
             if result[16] in ["MUL", "PRI"]:
                 fk = getforeignkey(db, dbname, tablename, result[3])
