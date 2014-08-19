@@ -79,7 +79,8 @@ def init_db(login, passwd, dbname, addr, port):
         if addr is None:
             db = peewee.MySQLDatabase(dbname, user=login, passwd=passwd)
         else:
-            db = peewee.MySQLDatabase(dbname, user=login, passwd=passwd, host=addr, port=port)
+            db = peewee.MySQLDatabase(dbname, user=login, passwd=passwd, 
+                host=addr, port=port)
     except Exception, e:
         print e
         db = None
