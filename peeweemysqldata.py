@@ -183,14 +183,9 @@ class FloatStructure(BaseFieldStructure):
 
 class IntegerStructure(BaseFieldStructure):
     def __init__(self, *args, **kwargs):
-        try:
-            self.auto_increment = kwargs["auto_increment"]
-        except:
-            self.auto_increment = False
         BaseFieldStructure.__init__(self, *args, **kwargs)
     def __str__(self):
         result = self.name + " = IntegerField("
-        result += self.add_parameter(self.auto_increment == True, "auto_increment = True")
         result += BaseFieldStructure.__str__(self) + ")"
         return result
 

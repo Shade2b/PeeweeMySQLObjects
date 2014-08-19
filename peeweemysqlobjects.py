@@ -329,7 +329,7 @@ def write_orm_files(db, dbname, login, passwd):
 
         fieldlist = StructureList()
 
-        columns = getcolumns(db, dbname, tablename, 3, 5, 15, 16, 17)
+        columns = getcolumns(db, dbname, tablename, 3, 5, 15, 16)
         for result in columns:
             # 3 = colname, 15 = coltype, 16 = Primary / FK ?
             indexes = None
@@ -346,7 +346,6 @@ def write_orm_files(db, dbname, login, passwd):
             decimals = ()
             in_keys = False
             constype = 48
-            auto_increment = False
             #index = {}
             indexes = getindexes(db, dbname, tablename, result[3])
             if result[16] in ["MUL", "PRI"]:
@@ -396,7 +395,6 @@ def write_orm_files(db, dbname, login, passwd):
                         result[15]
                     )
                     print "BareField() selected."
-            auto_increment = True if "auto_increment" in result[17] else False
             default = None
             try:
                 default = ast.literal_eval(result[5])
@@ -414,7 +412,6 @@ def write_orm_files(db, dbname, login, passwd):
                     max_length = max_length, 
                     reftable = reftable, 
                     related_name = related_name,
-                    auto_increment = auto_increment,
                     constype = constype)
             )
         # Set up foreign keys and indexes
