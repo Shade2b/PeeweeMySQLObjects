@@ -45,6 +45,7 @@ Any FK dependancy module is import'ed in the generated files.
 # IMPORTS #
 # import argparse # imported in if __name__ == "__main__"
 import ast
+import logging
 import os
 import shutil
 import time
@@ -54,16 +55,16 @@ import time
 try:
     import peewee
 except ImportError:
-    print "Error. This module requires peewee."
-    print "You can '$ pip install peewee' or get it from"
-    print "    http://peewee.readthedocs.org/en/latest/ ."
+    logging.error("Error. This module requires peewee.  \
+        You can '$ pip install peewee' or get it from \
+        http://peewee.readthedocs.org/en/latest/ .")
     exit(1)
     
 # LOCAL IMPORTS #
 try:
     from peeweemysqldata import *
 except ImportError, i:
-    print "Error importing data structures (peeweemysqldata) : %s"%str(i)
+    logging.error("Error importing data structures (peeweemysqldata) : %s"%str(i))
     exit(1)
 
 # FUNCTIONS #
@@ -82,7 +83,7 @@ def init_db(login, passwd, dbname, addr, port):
             db = peewee.MySQLDatabase(dbname, user=login, passwd=passwd, 
                 host=addr, port=port)
     except Exception, e:
-        print e
+        logging.error(e)
         db = None
         return db
     db.get_conn().set_character_set('utf8')
@@ -221,14 +222,14 @@ def getcolumns(db, dbname, tablename, *args):
                 buff.update({arg:str(field[arg])})
             except Exception, e:
                 if len(result) == 0:
-                    print "Error occured on the first column."
+                    logging.warning("Error occured on the first column.")
                 else:
-                    print "Error occured after %s.%s"%(
+                    logging.warning("Error occured after %s.%s"%(
                         tablename,
                         str(result[-1][3])
-                    )
-                print e
-                print "\nResuming..."
+                    ))
+                logging.warning(e)
+                logging.warning("\nResuming...")
                 buff.update({arg:"None"})
         result.append(buff)
     return result
@@ -325,7 +326,7 @@ def write_orm_files(db, dbname, login, passwd):
     }
 
     for tablename in db.get_tables():
-        print "    Processing %s..."%tablename
+        logging.info("    Processing %s..."%tablename)
 
         fieldlist = StructureList()
 
@@ -390,11 +391,11 @@ def write_orm_files(db, dbname, login, passwd):
                 # Uknown data type ? => BareField.
                 if in_keys == False:
                     fieldtype = "Bare"
-                    print "Couldn't determine field type of %s.%s."%(
+                    logging.warning("Couldn't determine field type of %s.%s."%(
                         result[3],
                         result[15]
-                    )
-                    print "BareField() selected."
+                    ))
+                    logging.warning("BareField() selected.")
             default = None
             try:
                 default = ast.literal_eval(result[5])
@@ -513,8 +514,6 @@ if __name__ == "__main__":
         print "peeweemysqlobjects version %s."%get_version()
         print "Developped and tested with MySQL 5.6.12."
         exit(0)
-
-    print "MAIN"
     
     dbname = args.databasename
     login = args.login[0]
@@ -525,13 +524,11 @@ if __name__ == "__main__":
     else:
         port = int(args.port)
     
-    print "INIT DB"
     db = init_db(login, passwd, dbname, addr, port)
     if db is not None:
-        print "WRITE __metadb__.py"
         write_metadb(login, passwd, dbname, addr, port)
-        print "WRITE ORM FILES"
         write_orm_files(db, dbname, login, passwd)
-        print "WRITE MODULE __init__.py FILE"
         write_module_init(dbname)
-        print "\nAND IT'S DONE ! Enjoy your MySQL db in Python !"
+        exit(0)
+
+    exit(1)
