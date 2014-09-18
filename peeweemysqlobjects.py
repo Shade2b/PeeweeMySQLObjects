@@ -47,6 +47,7 @@ Any FK dependancy module is import'ed in the generated files.
 import ast
 import logging
 import os
+import re
 import shutil
 import time
 # import sys # imported in if __name__ == "__main__"
@@ -93,7 +94,7 @@ def init_db(login, passwd, dbname, addr, port):
 ################################################################################
 ################################################################################
 def get_version():
-    return "0.1.1.3"
+    return "0.1.1.4"
 
 ################################################################################
 ################################################################################
@@ -302,7 +303,7 @@ def getenumvalues(tabname,colname, db):
 ################################################################################
 ################################################################################
 ################################################################################
-def write_orm_files(db, dbname, login, passwd):
+def write_orm_files(db, dbname, login, passwd, nofk):
     """
     Uses the column definitions to generate peewee ORM files.
     """
@@ -317,7 +318,7 @@ def write_orm_files(db, dbname, login, passwd):
         "double" : DoubleStructure,
         "enum" : EnumStructure,
         "float" : FloatStructure,
-        "foreignkey" : ForeignKeyStructure,
+        "foreignkey" : ForeignKeyStructure if nofk is True else IntegerStructure,
         "int" : IntegerStructure,
         "text": TextStructure,
         "time": TimeStructure,
@@ -437,8 +438,7 @@ class %s(BaseModel):
             line = str(field)
             if "primary_key = True" in line \
                 and len(fieldlist.get_primary_keys()) > 1:
-                line = "".join(line.split(", primary_key = True"))
-                line = "".join(line.split("primary_key = True"))
+                re.sub("(,)( )*(primary_key = True)(,)*( )*", "", line)
             openedfile.write("    %s\n"%line)
         
         if len(fieldlist.get_primary_keys()) > 1:
@@ -506,10 +506,10 @@ if __name__ == "__main__":
     argparser.add_argument('-p', '--passwd', nargs=1, help="password")
     argparser.add_argument('-a', '--addr', help="ip address of remote server (default localhost)")
     argparser.add_argument('--port', help="port of remote server (default 3306)")
+    argparser.add_argument("--nofk", action='store_true', help="Transform foreign key columns to plain integer columns. Useful for reference cycles.")
     argparser.add_argument('databasename')
 
     args = argparser.parse_args()
-
     if args.v == True:
         print "peeweemysqlobjects version %s."%get_version()
         print "Developped and tested with MySQL 5.6.12."
@@ -523,11 +523,15 @@ if __name__ == "__main__":
         port = 3306
     else:
         port = int(args.port)
-    
+    if args.nofk is None:
+        nofk = False
+    else:
+        nofk = True
+
     db = init_db(login, passwd, dbname, addr, port)
     if db is not None:
         write_metadb(login, passwd, dbname, addr, port)
-        write_orm_files(db, dbname, login, passwd)
+        write_orm_files(db, dbname, login, passwd, nofk)
         write_module_init(dbname)
         exit(0)
 
