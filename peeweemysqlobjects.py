@@ -240,9 +240,8 @@ def getcolumns(db, dbname, tablename, *args):
 ################################################################################
 def getforeignkey(db, dbname, table, column):
     """
-    Retrieves, for a given column, its REFERENCED_TABLE_NAME and
-    REFERENCED_COLUMN_NAME
-    under a dictionary form. 
+    Retrieve, for a given column, its REFERENCED_TABLE_NAME and
+    REFERENCED_COLUMN_NAME under a dictionary form. 
     """
     sql = "SELECT `REFERENCED_TABLE_NAME`,`REFERENCED_COLUMN_NAME` \
             FROM information_schema.KEY_COLUMN_USAGE \
@@ -291,13 +290,13 @@ def getindexes(db, dbname, tablename, columnname):
 ################################################################################
 def getenumvalues(tabname,colname, db):
     """
-    Retrieves the possibilities for a given Enum field.
+    Retrieve the possibilities for a given Enum field.
     """
     sql = "SHOW COLUMNS FROM %s WHERE Field LIKE '%s'"%(tabname, colname)
     result = db.execute_sql(sql)
     result = [row[1] for row in result]
     result = [i.strip("'") for i in result[0].split("enum")[1]
-        .lstrip("(").rstrip(")").split(",")]
+        .strip("()").split(",")]
     return {colname: result}
 
 ################################################################################
@@ -305,8 +304,10 @@ def getenumvalues(tabname,colname, db):
 ################################################################################
 def write_orm_files(db, dbname, login, passwd, nofk):
     """
-    Uses the column definitions to generate peewee ORM files.
+    Use the column definitions to generate peewee ORM files.
     """
+    # This array is used to know which definition to use depending on column
+    # definition.
     possibilities = {
         "Bare" : BareStructure,
         "bigint" : BigIntegerStructure,
@@ -419,7 +420,7 @@ def write_orm_files(db, dbname, login, passwd, nofk):
         # Set up foreign keys and indexes
         fieldlist.set_up()
         # Write the file out !
-        basetext = """#!/usr/bin/env python2.7
+        basetext = """#!/usr/bin/env python
 #-*-encoding: utf-8-*-
 
 from peewee import *
@@ -471,6 +472,10 @@ class %s(BaseModel):
 ################################################################################
 ################################################################################
 def write_module_init(dbname):
+    """
+    List all .py files under the dbname directory, and write them out
+    in the __init__.py file.
+    """
     filename = dbname+"/__init__.py"
     if os.path.isfile(filename):
         os.remove(filename)
@@ -500,7 +505,7 @@ if __name__ == "__main__":
     import sys
 
     argparser = argparse.ArgumentParser(description="Utility tool to \
-        convert a MySQL database into peewee orm files.")
+        convert a MySQL database into Peewee ORM files.")
     argparser.add_argument('-v', action='store_true', help="prints version")
     argparser.add_argument('-u', '--user', dest='login', nargs=1, help="login")
     argparser.add_argument('-p', '--passwd', nargs=1, help="password")
