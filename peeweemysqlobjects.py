@@ -184,43 +184,20 @@ class BaseModel(Model):
 ################################################################################
 ################################################################################
 ################################################################################
-def getcolumns(db, dbname, tablename, *args):
+def getcolumnsinfo(db, dbname, tablename):
     """
     Queries the database for fields informations in information_schema.
-    Returns the fields from the information_schema you want based on their 
-    position.
-    Ex : getcolumns(dbname, tablename, 3, 15, 16)
-    will return you the fields 3, 15 and 16 (column name, column type, key type)
-    List of fields:
-    0 : the table catalog (usually u"def")
-    1 : the table schema
-    2 : the table name
-    3 : the column name
-    4 : the ordinal position
-    5 : the column default value
-    6 : Is the column nullable ? Contains u"YES" or u"NO"
-    7 : the column data type
-    8 : the character maximum length
-    9 : the character octet length
-    10: the numeric precision
-    11: the numeric scale
-    12: the datetime precision
-    13: the character set name
-    14: the collation name
-    15: the column type (to not mismatch with column data type)
-    16: what type of key is the column (if applicable.)
-    17: the "extra" info (like "auto_increment")
-    18: the priviliges
-    19: the column comment
     """
     result = []
-    sql = "SELECT * FROM information_schema.columns WHERE table_schema='%s' \
-            AND table_name = '%s' ORDER BY table_name, ordinal_position"
+    sql = "SELECT column_name, column_default, column_type, column_key \
+        FROM information_schema.columns WHERE table_schema='%s' \
+        AND table_name = '%s' ORDER BY table_name, ordinal_position"
     for field in db.execute_sql(sql%(dbname,tablename)):
-        buff = {}
+        """
+        buff = []
         for arg in args:
             try:
-                buff.update({arg:str(field[arg])})
+                buff.append()
             except Exception, e:
                 if len(result) == 0:
                     logging.warning("Error occured on the first column.")
@@ -232,7 +209,8 @@ def getcolumns(db, dbname, tablename, *args):
                 logging.warning(e)
                 logging.warning("\nResuming...")
                 buff.update({arg:"None"})
-        result.append(buff)
+        """
+        result.append(field)
     return result
 
 ################################################################################
@@ -332,9 +310,8 @@ def write_orm_files(db, dbname, login, passwd, nofk):
 
         fieldlist = StructureList()
 
-        columns = getcolumns(db, dbname, tablename, 3, 5, 15, 16)
+        columns = getcolumnsinfo(db, dbname, tablename)
         for result in columns:
-            # 3 = colname, 15 = coltype, 16 = Primary / FK ?
             indexes = None
             fieldtype = None
             primary_key = False
@@ -350,21 +327,21 @@ def write_orm_files(db, dbname, login, passwd, nofk):
             in_keys = False
             constype = 48
             #index = {}
-            indexes = getindexes(db, dbname, tablename, result[3])
-            if result[16] in ["MUL", "PRI"]:
-                fk = getforeignkey(db, dbname, tablename, result[3])
+            indexes = getindexes(db, dbname, tablename, result[0])
+            if result[3] in ["MUL", "PRI"]:
+                fk = getforeignkey(db, dbname, tablename, result[0])
                 if fk is not None:
                     fieldtype = "foreignkey"
-                    reftable = fk[result[3]]["reftable"]
-                    related_name = fk[result[3]]["refcol"]
-                    constype = fk[result[3]]["type"]
-                if "PRI" in result[16]:
+                    reftable = fk[result[0]]["reftable"]
+                    related_name = fk[result[0]]["refcol"]
+                    constype = fk[result[0]]["type"]
+                if "PRI" in result[3]:
                     if fk is None:
                         fieldtype = "int"
                     primary_key = True
             if fieldtype is None:
                 for key in possibilities:
-                    if key in result[15]:
+                    if key in result[2]:
 
                         in_keys = True
                         fieldtype = key
@@ -372,7 +349,7 @@ def write_orm_files(db, dbname, login, passwd, nofk):
                         if "decimal" in key:
                             # Parse the Decimal definition to 
                             # get digits and precison
-                            buff = result[15].split("decimal")[1]
+                            buff = result[2].split("decimal")[1]
                             decimals = ast.literal_eval(buff)
                             max_digits = decimals[0]
                             decimal_places = decimals[1]
@@ -380,32 +357,32 @@ def write_orm_files(db, dbname, login, passwd, nofk):
                         if "enum" in key:
                             enum_values = getenumvalues(
                                 tablename, 
-                                result[3], 
-                                db)[result[3]]
+                                result[0], 
+                                db)[result[0]]
 
                         if "char" in key:
-                            max_length = int(result[15].split("char")[1]
+                            max_length = int(result[2].split("char")[1]
                                 .lstrip("(").rstrip(")"))
 
-                        if "UNI" in result[16] :
+                        if "UNI" in result[3] :
                             unique = True
                         break
                 # Uknown data type ? => BareField.
                 if in_keys == False:
                     fieldtype = "Bare"
                     logging.warning("Couldn't determine field type of %s.%s."%(
-                        result[3],
-                        result[15]
+                        result[0],
+                        result[2]
                     ))
                     logging.warning("BareField() selected.")
             default = None
             try:
-                default = ast.literal_eval(result[5])
+                default = ast.literal_eval(result[1])
             except:
-                default = result[5]
+                default = result[1]
             fieldlist.append(
                 possibilities[fieldtype](
-                    name = result[3], 
+                    name = result[0], 
                     primary_key = primary_key,
                     indexes = indexes,
                     values = enum_values, 
